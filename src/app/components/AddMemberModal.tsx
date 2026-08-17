@@ -3,11 +3,8 @@ import { X } from "lucide-react";
 
 interface MemberData {
   name: string;
-  age: number;
-  gender: string;
-  height: string;
-  weight: string;
-  bloodGroup: string;
+  email: string;
+  relationship: string;
 }
 
 export default function AddMemberModal({
@@ -15,31 +12,50 @@ export default function AddMemberModal({
   onSave,
 }: {
   onClose: () => void;
-  onSave: (data: MemberData) => void;
+  onSave: (data: MemberData) => Promise<void> | void;
 }) {
   const [formData, setFormData] = useState<MemberData>({
     name: "",
-    age: 0,
-    gender: "",
-    height: "",
-    weight: "",
-    bloodGroup: "",
+    email: "",
+    relationship: "",
   });
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSave(formData);
+    setError("");
+    setSaving(true);
+    try {
+      await onSave(formData);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
+
+  const inputClass =
+    "w-full px-4 py-3 border-2 border-[#D6E4F5] rounded-xl focus:outline-none focus:border-[#2F5D9F] bg-white";
 
   return (
     <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
       <div className="bg-white rounded-2xl p-8 w-full max-w-lg shadow-lg max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-[#1F3E72]">Add Family Member</h3>
-          <button onClick={onClose} className="text-[#5C7BA8] hover:text-[#1F3E72]">
+          <button
+            onClick={onClose}
+            className="text-[#5C7BA8] hover:text-[#1F3E72]"
+          >
             <X size={24} />
           </button>
         </div>
+
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
@@ -47,87 +63,45 @@ export default function AddMemberModal({
             <input
               type="text"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-[#D6E4F5] rounded-xl focus:outline-none focus:border-[#2F5D9F] bg-white"
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              className={inputClass}
               placeholder="Enter name"
               required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[#1F3E72] mb-2">Age</label>
-              <input
-                type="number"
-                value={formData.age || ""}
-                onChange={(e) =>
-                  setFormData({ ...formData, age: parseInt(e.target.value) || 0 })
-                }
-                className="w-full px-4 py-3 border-2 border-[#D6E4F5] rounded-xl focus:outline-none focus:border-[#2F5D9F] bg-white"
-                placeholder="Age"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-[#1F3E72] mb-2">Gender</label>
-              <select
-                value={formData.gender}
-                onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-[#D6E4F5] rounded-xl focus:outline-none focus:border-[#2F5D9F] bg-white"
-                required
-              >
-                <option value="">Select</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-[#1F3E72] mb-2">Height</label>
-              <input
-                type="text"
-                value={formData.height}
-                onChange={(e) => setFormData({ ...formData, height: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-[#D6E4F5] rounded-xl focus:outline-none focus:border-[#2F5D9F] bg-white"
-                placeholder="e.g., 170 cm"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-[#1F3E72] mb-2">Weight</label>
-              <input
-                type="text"
-                value={formData.weight}
-                onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                className="w-full px-4 py-3 border-2 border-[#D6E4F5] rounded-xl focus:outline-none focus:border-[#2F5D9F] bg-white"
-                placeholder="e.g., 70 kg"
-                required
-              />
-            </div>
+          <div>
+            <label className="block text-[#1F3E72] mb-2">Email</label>
+            <input
+              type="email"
+              value={formData.email}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
+              className={inputClass}
+              placeholder="Enter email (used for OTP login)"
+              required
+            />
           </div>
 
           <div>
-            <label className="block text-[#1F3E72] mb-2">Blood Group</label>
+            <label className="block text-[#1F3E72] mb-2">Relationship</label>
             <select
-              value={formData.bloodGroup}
-              onChange={(e) => setFormData({ ...formData, bloodGroup: e.target.value })}
-              className="w-full px-4 py-3 border-2 border-[#D6E4F5] rounded-xl focus:outline-none focus:border-[#2F5D9F] bg-white"
+              value={formData.relationship}
+              onChange={(e) =>
+                setFormData({ ...formData, relationship: e.target.value })
+              }
+              className={inputClass}
               required
             >
               <option value="">Select</option>
-              <option value="A+">A+</option>
-              <option value="A-">A-</option>
-              <option value="B+">B+</option>
-              <option value="B-">B-</option>
-              <option value="AB+">AB+</option>
-              <option value="AB-">AB-</option>
-              <option value="O+">O+</option>
-              <option value="O-">O-</option>
+              <option value="spouse">Spouse</option>
+              <option value="child">Child</option>
+              <option value="parent">Parent</option>
+              <option value="sibling">Sibling</option>
+              <option value="other">Other</option>
             </select>
           </div>
 
@@ -141,9 +115,10 @@ export default function AddMemberModal({
             </button>
             <button
               type="submit"
-              className="flex-1 py-3 bg-[#2F5D9F] text-white rounded-xl hover:bg-[#1F3E72] transition-colors shadow-[0_4px_14px_rgb(47,93,159,0.25)]"
+              disabled={saving}
+              className="flex-1 py-3 bg-[#2F5D9F] text-white rounded-xl hover:bg-[#1F3E72] transition-colors shadow-[0_4px_14px_rgb(47,93,159,0.25)] disabled:opacity-60"
             >
-              Save
+              {saving ? "Saving..." : "Save"}
             </button>
           </div>
         </form>

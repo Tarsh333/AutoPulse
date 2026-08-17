@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { register } from "../api/auth";
+import { updateProfile } from "../api/profile";
 
 export default function SignupPage({
   onSignup,
@@ -12,10 +14,34 @@ export default function SignupPage({
   const [password, setPassword] = useState("");
   const [age, setAge] = useState("");
   const [gender, setGender] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onSignup();
+    setError("");
+    setLoading(true);
+    try {
+      // Create the main member account (stores the JWT).
+      await register(name, email, password);
+
+      // Persist the extra profile fields the backend supports.
+      // Age isn't stored directly, so derive an approximate date of birth.
+      let dateOfBirth: string | null = null;
+      const ageNum = parseInt(age, 10);
+      if (!Number.isNaN(ageNum) && ageNum > 0) {
+        const birthYear = new Date().getFullYear() - ageNum;
+        dateOfBirth = `${birthYear}-01-01`;
+      }
+
+      await updateProfile({ gender, dateOfBirth });
+
+      onSignup();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -25,6 +51,12 @@ export default function SignupPage({
           <h1 className="text-[#1F3E72] mb-2" style={{ fontSize: '32px' }}>AutoPulse</h1>
           <p className="text-[#5C7BA8]">Create your account</p>
         </div>
+
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
@@ -94,9 +126,10 @@ export default function SignupPage({
 
           <button
             type="submit"
-            className="w-full py-4 bg-[#2F5D9F] text-white rounded-xl hover:bg-[#1F3E72] transition-colors shadow-[0_4px_14px_rgb(47,93,159,0.25)] mt-6"
+            disabled={loading}
+            className="w-full py-4 bg-[#2F5D9F] text-white rounded-xl hover:bg-[#1F3E72] transition-colors shadow-[0_4px_14px_rgb(47,93,159,0.25)] mt-6 disabled:opacity-60"
           >
-            Sign Up
+            {loading ? "Creating account..." : "Sign Up"}
           </button>
         </form>
 

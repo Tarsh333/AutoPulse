@@ -1,12 +1,37 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { X } from "lucide-react";
+import { uploadDocument } from "../api/documents";
 
-export default function AddReportModal({ onClose }: { onClose: () => void }) {
+export default function AddReportModal({
+  onClose,
+  onUploaded,
+}: {
+  onClose: () => void;
+  onUploaded?: () => void;
+}) {
   const [category, setCategory] = useState("");
+  const [file, setFile] = useState<File | null>(null);
+  const [error, setError] = useState("");
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onClose();
+    if (!file) {
+      setError("Please choose a file");
+      return;
+    }
+    setError("");
+    setUploading(true);
+    try {
+      await uploadDocument(file, category || "lab_report");
+      onUploaded?.();
+      onClose();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setUploading(false);
+    }
   };
 
   return (
@@ -14,10 +39,19 @@ export default function AddReportModal({ onClose }: { onClose: () => void }) {
       <div className="bg-white rounded-xl p-8 w-full max-w-md shadow-lg">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-[#1F3E72]">Add Report</h3>
-          <button onClick={onClose} className="text-[#5C7BA8] hover:text-[#1F3E72]">
+          <button
+            onClick={onClose}
+            className="text-[#5C7BA8] hover:text-[#1F3E72]"
+          >
             <X size={20} />
           </button>
         </div>
+
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">
+            {error}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <div>
@@ -29,29 +63,38 @@ export default function AddReportModal({ onClose }: { onClose: () => void }) {
               required
             >
               <option value="">Select category</option>
-              <option value="blood-test">Blood Test</option>
+              <option value="lab_report">Blood Test / Lab Report</option>
               <option value="xray">X-Ray</option>
               <option value="mri">MRI</option>
-              <option value="ct-scan">CT Scan</option>
+              <option value="ct_scan">CT Scan</option>
               <option value="other">Other</option>
             </select>
           </div>
 
           <div>
             <label className="block text-[#1F3E72] mb-2">Upload File</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="application/pdf,image/*"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="hidden"
+            />
             <button
               type="button"
-              className="w-full py-3 border border-[#2F5D9F] text-[#2F5D9F] rounded-lg hover:bg-[#EAF2FB] transition-colors"
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full py-3 border border-[#2F5D9F] text-[#2F5D9F] rounded-lg hover:bg-[#EAF2FB] transition-colors truncate px-4"
             >
-              Choose File
+              {file ? file.name : "Choose File (PDF or image)"}
             </button>
           </div>
 
           <button
             type="submit"
-            className="w-full py-3.5 bg-[#2F5D9F] text-white rounded-lg hover:bg-[#1F3E72] transition-colors mt-6"
+            disabled={uploading}
+            className="w-full py-3.5 bg-[#2F5D9F] text-white rounded-lg hover:bg-[#1F3E72] transition-colors mt-6 disabled:opacity-60"
           >
-            Save
+            {uploading ? "Uploading..." : "Save"}
           </button>
         </form>
       </div>

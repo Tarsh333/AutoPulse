@@ -1,10 +1,25 @@
-import { useState } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts";
-import { Search, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  ResponsiveContainer,
+} from "recharts";
+import { Search, Users, LogOut, RefreshCw } from "lucide-react";
 import AddPrescriptionModal from "./AddPrescriptionModal";
 import AddReportModal from "./AddReportModal";
 import ShareQRModal from "./ShareQRModal";
+import { getProfile, Profile } from "../api/profile";
+import {
+  getDocuments,
+  getDownloadUrl,
+  reExtractDocument,
+  DocumentItem,
+} from "../api/documents";
 
+// Health graph + appointment have no backend endpoint yet — kept as mock UI.
 const mockHealthData = {
   BP: [
     { time: "Mon", value: 120 },
@@ -26,35 +41,101 @@ const mockHealthData = {
   ],
 };
 
-const mockPrescriptions = [
-  { id: 1, name: "Annual Checkup Report", date: "2026-04-15" },
-  { id: 2, name: "Blood Test Results", date: "2026-04-10" },
-  { id: 3, name: "Prescription - Antibiotics", date: "2026-04-05" },
-  { id: 4, name: "X-Ray Report", date: "2026-03-28" },
-];
-
-interface Member {
-  id: number;
-  name: string;
-  age: number;
-  gender: string;
-  height: string;
-  weight: string;
-  bloodGroup: string;
-  avatar: string;
-}
-
 interface DashboardProps {
-  selectedMember: Member;
   onNavigateToMembers: () => void;
+  onLogout: () => void;
 }
 
-export default function Dashboard({ selectedMember, onNavigateToMembers }: DashboardProps) {
+function initials(name?: string) {
+  if (!name) return "?";
+  return name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function ageFromDob(dob?: string | null): string {
+  if (!dob) return "—";
+  const birth = new Date(dob);
+  if (Number.isNaN(birth.getTime())) return "—";
+  const now = new Date();
+  let age = now.getFullYear() - birth.getFullYear();
+  const m = now.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < birth.getDate())) age--;
+  return `${age}`;
+}
+
+const statusStyles: Record<string, string> = {
+  pending: "bg-amber-50 text-amber-600",
+  processing: "bg-blue-50 text-blue-600",
+  done: "bg-green-50 text-green-600",
+  failed: "bg-red-50 text-red-600",
+  skipped: "bg-gray-100 text-gray-500",
+};
+
+export default function Dashboard({
+  onNavigateToMembers,
+  onLogout,
+}: DashboardProps) {
   const [selectedMetric, setSelectedMetric] = useState<"BP" | "ECG">("BP");
   const [searchQuery, setSearchQuery] = useState("");
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [error, setError] = useState("");
+
+  const loadDocuments = async () => {
+    try {
+      setDocuments(await getDocuments());
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  useEffect(() => {
+    getProfile()
+      .then(setProfile)
+      .catch((err) => setError((err as Error).message));
+    loadDocuments();
+  }, []);
+
+  // Poll while any document is still being processed by the worker.
+  useEffect(() => {
+    const anyPending = documents.some(
+      (d) => d.extraction_status === "pending" || d.extraction_status === "processing"
+    );
+    if (!anyPending) return;
+    const t = setInterval(loadDocuments, 4000);
+    return () => clearInterval(t);
+  }, [documents]);
+
+  const handleDownload = async (id: number) => {
+    try {
+      const { url } = await getDownloadUrl(id);
+      window.open(url, "_blank");
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const handleReExtract = async (id: number) => {
+    try {
+      await reExtractDocument(id);
+      await loadDocuments();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const filtered = documents.filter((d) =>
+    d.file_name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-[#EAF2FB] flex">
@@ -68,6 +149,12 @@ export default function Dashboard({ selectedMember, onNavigateToMembers }: Dashb
             <Users size={20} />
             <span>All Members</span>
           </button>
+          <button
+            onClick={onLogout}
+            className="flex items-center gap-1 text-[#5C7BA8] hover:text-[#1F3E72] transition-colors"
+          >
+            <LogOut size={18} />
+          </button>
         </div>
 
         <h3 className="text-[#1F3E72] mb-6">Basic Details</h3>
@@ -75,28 +162,29 @@ export default function Dashboard({ selectedMember, onNavigateToMembers }: Dashb
         <div className="space-y-6">
           <div className="flex flex-col items-center pb-6 border-b border-[#D6E4F5]">
             <div className="w-24 h-24 rounded-full bg-[#2F5D9F] text-white flex items-center justify-center text-2xl mb-4">
-              {selectedMember.avatar}
+              {initials(profile?.name)}
             </div>
-            <h4 className="text-[#1F3E72]">{selectedMember.name}</h4>
+            <h4 className="text-[#1F3E72]">{profile?.name ?? "..."}</h4>
             <p className="text-[#5C7BA8]">
-              {selectedMember.age} years, {selectedMember.gender}
+              {ageFromDob(profile?.date_of_birth)} years
+              {profile?.gender ? `, ${profile.gender}` : ""}
             </p>
           </div>
 
           <div className="space-y-4">
             <div className="p-4 bg-[#EAF2FB] rounded-xl">
               <p className="text-sm text-[#5C7BA8] mb-1">Height</p>
-              <p className="text-[#1F3E72]">{selectedMember.height}</p>
+              <p className="text-[#1F3E72]">{profile?.height ?? "—"}</p>
             </div>
 
             <div className="p-4 bg-[#EAF2FB] rounded-xl">
               <p className="text-sm text-[#5C7BA8] mb-1">Weight</p>
-              <p className="text-[#1F3E72]">{selectedMember.weight}</p>
+              <p className="text-[#1F3E72]">{profile?.weight ?? "—"}</p>
             </div>
 
             <div className="p-4 bg-[#EAF2FB] rounded-xl">
               <p className="text-sm text-[#5C7BA8] mb-1">Blood Group</p>
-              <p className="text-[#1F3E72]">{selectedMember.bloodGroup}</p>
+              <p className="text-[#1F3E72]">{profile?.blood_group ?? "—"}</p>
             </div>
           </div>
 
@@ -112,6 +200,12 @@ export default function Dashboard({ selectedMember, onNavigateToMembers }: Dashb
       {/* Main Content */}
       <div className="flex-1 p-8">
         <div className="max-w-6xl mx-auto space-y-6">
+          {error && (
+            <div className="p-4 rounded-xl bg-red-50 text-red-600 text-sm">
+              {error}
+            </div>
+          )}
+
           {/* Top Actions */}
           <div className="grid grid-cols-3 gap-4">
             <button
@@ -134,13 +228,15 @@ export default function Dashboard({ selectedMember, onNavigateToMembers }: Dashb
             </button>
           </div>
 
-          {/* Health Data Graph */}
+          {/* Health Data Graph (mock) */}
           <div className="bg-white rounded-xl p-6 border border-[#D6E4F5]">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-[#1F3E72]">Health Data</h3>
               <select
                 value={selectedMetric}
-                onChange={(e) => setSelectedMetric(e.target.value as "BP" | "ECG")}
+                onChange={(e) =>
+                  setSelectedMetric(e.target.value as "BP" | "ECG")
+                }
                 className="px-4 py-2 border border-[#D6E4F5] rounded-lg focus:outline-none focus:border-[#2F5D9F] bg-white text-[#1F3E72]"
               >
                 <option value="BP">Blood Pressure</option>
@@ -164,42 +260,97 @@ export default function Dashboard({ selectedMember, onNavigateToMembers }: Dashb
             </ResponsiveContainer>
           </div>
 
-          {/* Previous Prescriptions */}
+          {/* Documents */}
           <div className="bg-white rounded-xl p-6 border border-[#D6E4F5]">
-            <h3 className="text-[#1F3E72] mb-4">Previous Prescriptions</h3>
+            <h3 className="text-[#1F3E72] mb-4">My Documents</h3>
 
             <div className="relative mb-4">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5C7BA8]" size={18} />
+              <Search
+                className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5C7BA8]"
+                size={18}
+              />
               <input
                 type="text"
-                placeholder="Search prescriptions..."
+                placeholder="Search documents..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-[#D6E4F5] rounded-lg focus:outline-none focus:border-[#2F5D9F] bg-white"
               />
             </div>
 
-            <div className="space-y-3">
-              {mockPrescriptions.map((prescription) => (
-                <div
-                  key={prescription.id}
-                  className="flex items-center justify-between p-4 border border-[#D6E4F5] rounded-lg hover:bg-[#EAF2FB] transition-colors"
-                >
-                  <div>
-                    <p className="text-[#1F3E72]">{prescription.name}</p>
-                    <p className="text-sm text-[#5C7BA8]">{prescription.date}</p>
+            {filtered.length === 0 ? (
+              <p className="text-[#5C7BA8]">No documents yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {filtered.map((doc) => (
+                  <div
+                    key={doc.id}
+                    className="border border-[#D6E4F5] rounded-lg hover:bg-[#EAF2FB] transition-colors"
+                  >
+                    <div className="flex items-center justify-between p-4">
+                      <div className="min-w-0">
+                        <p className="text-[#1F3E72] truncate">
+                          {doc.file_name}
+                        </p>
+                        <p className="text-sm text-[#5C7BA8]">
+                          {new Date(doc.created_at).toLocaleDateString()}
+                          {doc.category ? ` · ${doc.category}` : ""}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span
+                          className={`text-xs px-2 py-1 rounded-full ${
+                            statusStyles[doc.extraction_status] ??
+                            "bg-gray-100 text-gray-500"
+                          }`}
+                        >
+                          {doc.extraction_status}
+                        </span>
+                        {(doc.extraction_status === "failed" ||
+                          doc.extraction_status === "skipped") && (
+                          <button
+                            onClick={() => handleReExtract(doc.id)}
+                            title="Re-run extraction"
+                            className="text-[#2F5D9F] hover:text-[#1F3E72]"
+                          >
+                            <RefreshCw size={16} />
+                          </button>
+                        )}
+                        {doc.extracted_data && (
+                          <button
+                            onClick={() =>
+                              setExpandedId(
+                                expandedId === doc.id ? null : doc.id
+                              )
+                            }
+                            className="text-[#2F5D9F] hover:underline"
+                          >
+                            {expandedId === doc.id ? "Hide" : "View Data"}
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDownload(doc.id)}
+                          className="text-[#2F5D9F] hover:underline"
+                        >
+                          Download
+                        </button>
+                      </div>
+                    </div>
+
+                    {expandedId === doc.id && doc.extracted_data && (
+                      <div className="px-4 pb-4">
+                        <ExtractedView data={doc.extracted_data} />
+                      </div>
+                    )}
                   </div>
-                  <button className="text-[#2F5D9F] hover:underline">
-                    View More
-                  </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Right Panel - Appointment */}
+      {/* Right Panel - Appointment (mock) */}
       <div className="w-80 bg-white border-l border-[#D6E4F5] p-6">
         <h3 className="text-[#1F3E72] mb-6">Next Appointment</h3>
 
@@ -213,14 +364,86 @@ export default function Dashboard({ selectedMember, onNavigateToMembers }: Dashb
 
       {/* Modals */}
       {showPrescriptionModal && (
-        <AddPrescriptionModal onClose={() => setShowPrescriptionModal(false)} />
+        <AddPrescriptionModal
+          onClose={() => setShowPrescriptionModal(false)}
+          onUploaded={loadDocuments}
+        />
       )}
       {showReportModal && (
-        <AddReportModal onClose={() => setShowReportModal(false)} />
+        <AddReportModal
+          onClose={() => setShowReportModal(false)}
+          onUploaded={loadDocuments}
+        />
       )}
-      {showQRModal && (
-        <ShareQRModal onClose={() => setShowQRModal(false)} />
-      )}
+      {showQRModal && <ShareQRModal onClose={() => setShowQRModal(false)} />}
     </div>
+  );
+}
+
+function ExtractedView({
+  data,
+}: {
+  data: NonNullable<DocumentItem["extracted_data"]>;
+}) {
+  if (data.document_type === "prescription" && data.medicines?.length) {
+    return (
+      <div className="bg-white border border-[#D6E4F5] rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-[#EAF2FB] text-[#1F3E72]">
+            <tr>
+              <th className="text-left p-2">Medicine</th>
+              <th className="text-left p-2">Strength</th>
+              <th className="text-left p-2">Dose</th>
+              <th className="text-left p-2">Frequency</th>
+              <th className="text-left p-2">Duration</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.medicines.map((m, i) => (
+              <tr key={i} className="border-t border-[#D6E4F5] text-[#5C7BA8]">
+                <td className="p-2">{m.name}</td>
+                <td className="p-2">{m.strength}</td>
+                <td className="p-2">{m.dose}</td>
+                <td className="p-2">{m.frequency}</td>
+                <td className="p-2">{m.duration}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  if (data.document_type === "lab_report" && data.metrics?.length) {
+    return (
+      <div className="bg-white border border-[#D6E4F5] rounded-lg overflow-hidden">
+        <table className="w-full text-sm">
+          <thead className="bg-[#EAF2FB] text-[#1F3E72]">
+            <tr>
+              <th className="text-left p-2">Metric</th>
+              <th className="text-left p-2">Value</th>
+              <th className="text-left p-2">Unit</th>
+              <th className="text-left p-2">Reference</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.metrics.map((m, i) => (
+              <tr key={i} className="border-t border-[#D6E4F5] text-[#5C7BA8]">
+                <td className="p-2">{m.name}</td>
+                <td className="p-2">{m.value}</td>
+                <td className="p-2">{m.unit}</td>
+                <td className="p-2">{m.reference_range}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  return (
+    <pre className="text-xs bg-[#EAF2FB] p-3 rounded-lg overflow-auto text-[#5C7BA8]">
+      {JSON.stringify(data, null, 2)}
+    </pre>
   );
 }
