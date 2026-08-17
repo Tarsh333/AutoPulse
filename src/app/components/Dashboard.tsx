@@ -11,35 +11,18 @@ import { Search, Users, LogOut, RefreshCw } from "lucide-react";
 import AddPrescriptionModal from "./AddPrescriptionModal";
 import AddReportModal from "./AddReportModal";
 import ShareQRModal from "./ShareQRModal";
+import ExtractedView from "./ExtractedView";
 import { getProfile, Profile } from "../api/profile";
 import {
   getDocuments,
   getDownloadUrl,
   reExtractDocument,
+  getMetrics,
+  MetricSeries,
   DocumentItem,
 } from "../api/documents";
 
-// Health graph + appointment have no backend endpoint yet — kept as mock UI.
-const mockHealthData = {
-  BP: [
-    { time: "Mon", value: 120 },
-    { time: "Tue", value: 118 },
-    { time: "Wed", value: 122 },
-    { time: "Thu", value: 119 },
-    { time: "Fri", value: 121 },
-    { time: "Sat", value: 117 },
-    { time: "Sun", value: 120 },
-  ],
-  ECG: [
-    { time: "Mon", value: 75 },
-    { time: "Tue", value: 78 },
-    { time: "Wed", value: 76 },
-    { time: "Thu", value: 80 },
-    { time: "Fri", value: 77 },
-    { time: "Sat", value: 74 },
-    { time: "Sun", value: 76 },
-  ],
-};
+// Appointment card has no backend endpoint yet — kept as mock UI.
 
 interface DashboardProps {
   onNavigateToMembers: () => void;
@@ -79,7 +62,8 @@ export default function Dashboard({
   onNavigateToMembers,
   onLogout,
 }: DashboardProps) {
-  const [selectedMetric, setSelectedMetric] = useState<"BP" | "ECG">("BP");
+  const [metrics, setMetrics] = useState<MetricSeries[]>([]);
+  const [selectedMetric, setSelectedMetric] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
@@ -90,9 +74,24 @@ export default function Dashboard({
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [error, setError] = useState("");
 
+  const loadMetrics = async () => {
+    try {
+      const { metrics } = await getMetrics();
+      setMetrics(metrics);
+      setSelectedMetric((prev) =>
+        prev && metrics.some((m) => m.name === prev)
+          ? prev
+          : metrics[0]?.name ?? ""
+      );
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   const loadDocuments = async () => {
     try {
       setDocuments(await getDocuments());
+      await loadMetrics();
     } catch (err) {
       setError((err as Error).message);
     }
@@ -136,6 +135,14 @@ export default function Dashboard({
   const filtered = documents.filter((d) =>
     d.file_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const activeSeries = metrics.find((m) => m.name === selectedMetric) ?? null;
+  const chartData = activeSeries
+    ? activeSeries.points.map((p) => ({
+        time: new Date(p.date).toLocaleDateString(),
+        value: p.value,
+      }))
+    : [];
 
   return (
     <div className="min-h-screen bg-[#EAF2FB] flex">
@@ -228,36 +235,64 @@ export default function Dashboard({
             </button>
           </div>
 
-          {/* Health Data Graph (mock) */}
+          {/* Health Data Graph — from extracted lab-report metrics */}
           <div className="bg-white rounded-xl p-6 border border-[#D6E4F5]">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-[#1F3E72]">Health Data</h3>
-              <select
-                value={selectedMetric}
-                onChange={(e) =>
-                  setSelectedMetric(e.target.value as "BP" | "ECG")
-                }
-                className="px-4 py-2 border border-[#D6E4F5] rounded-lg focus:outline-none focus:border-[#2F5D9F] bg-white text-[#1F3E72]"
-              >
-                <option value="BP">Blood Pressure</option>
-                <option value="ECG">Heart Rate</option>
-              </select>
+              <h3 className="text-[#1F3E72]">
+                Health Data
+                {activeSeries?.unit ? ` (${activeSeries.unit})` : ""}
+              </h3>
+              {metrics.length > 0 && (
+                <select
+                  value={selectedMetric}
+                  onChange={(e) => setSelectedMetric(e.target.value)}
+                  className="px-4 py-2 border border-[#D6E4F5] rounded-lg focus:outline-none focus:border-[#2F5D9F] bg-white text-[#1F3E72]"
+                >
+                  {metrics.map((m) => (
+                    <option key={m.name} value={m.name}>
+                      {m.name}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
 
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={mockHealthData[selectedMetric]}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#D6E4F5" />
-                <XAxis dataKey="time" stroke="#5C7BA8" />
-                <YAxis stroke="#5C7BA8" />
-                <Line
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#2F5D9F"
-                  strokeWidth={2}
-                  dot={{ fill: "#2F5D9F", r: 4 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+            {metrics.length === 0 ? (
+              <p className="text-[#5C7BA8] py-12 text-center">
+                No lab-report data yet. Upload a lab report and the extracted
+                metrics will be charted here.
+              </p>
+            ) : chartData.length === 1 ? (
+              <p className="text-[#5C7BA8] py-12 text-center">
+                Only one reading for {selectedMetric} so far
+                {` (${chartData[0].value}${
+                  activeSeries?.unit ? " " + activeSeries.unit : ""
+                })`}
+                . Upload more lab reports to see a trend.
+              </p>
+            ) : (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#D6E4F5" />
+                  <XAxis dataKey="time" stroke="#5C7BA8" />
+                  <YAxis stroke="#5C7BA8" domain={["auto", "auto"]} />
+                  <Line
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#2F5D9F"
+                    strokeWidth={2}
+                    dot={{ fill: "#2F5D9F", r: 4 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            )}
+
+            {activeSeries?.reference_range && (
+              <p className="text-sm text-[#5C7BA8] mt-3 text-center">
+                Reference range: {activeSeries.reference_range}
+                {activeSeries.unit ? ` ${activeSeries.unit}` : ""}
+              </p>
+            )}
           </div>
 
           {/* Documents */}
@@ -377,73 +412,5 @@ export default function Dashboard({
       )}
       {showQRModal && <ShareQRModal onClose={() => setShowQRModal(false)} />}
     </div>
-  );
-}
-
-function ExtractedView({
-  data,
-}: {
-  data: NonNullable<DocumentItem["extracted_data"]>;
-}) {
-  if (data.document_type === "prescription" && data.medicines?.length) {
-    return (
-      <div className="bg-white border border-[#D6E4F5] rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[#EAF2FB] text-[#1F3E72]">
-            <tr>
-              <th className="text-left p-2">Medicine</th>
-              <th className="text-left p-2">Strength</th>
-              <th className="text-left p-2">Dose</th>
-              <th className="text-left p-2">Frequency</th>
-              <th className="text-left p-2">Duration</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.medicines.map((m, i) => (
-              <tr key={i} className="border-t border-[#D6E4F5] text-[#5C7BA8]">
-                <td className="p-2">{m.name}</td>
-                <td className="p-2">{m.strength}</td>
-                <td className="p-2">{m.dose}</td>
-                <td className="p-2">{m.frequency}</td>
-                <td className="p-2">{m.duration}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  if (data.document_type === "lab_report" && data.metrics?.length) {
-    return (
-      <div className="bg-white border border-[#D6E4F5] rounded-lg overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-[#EAF2FB] text-[#1F3E72]">
-            <tr>
-              <th className="text-left p-2">Metric</th>
-              <th className="text-left p-2">Value</th>
-              <th className="text-left p-2">Unit</th>
-              <th className="text-left p-2">Reference</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.metrics.map((m, i) => (
-              <tr key={i} className="border-t border-[#D6E4F5] text-[#5C7BA8]">
-                <td className="p-2">{m.name}</td>
-                <td className="p-2">{m.value}</td>
-                <td className="p-2">{m.unit}</td>
-                <td className="p-2">{m.reference_range}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    );
-  }
-
-  return (
-    <pre className="text-xs bg-[#EAF2FB] p-3 rounded-lg overflow-auto text-[#5C7BA8]">
-      {JSON.stringify(data, null, 2)}
-    </pre>
   );
 }

@@ -4,6 +4,7 @@ import LoginPage from "./components/LoginPage";
 import SignupPage from "./components/SignupPage";
 import Dashboard from "./components/Dashboard";
 import FamilyMembersPage from "./components/FamilyMembersPage";
+import SharedDocumentsPage from "./components/SharedDocumentsPage";
 import { clearSession, isLoggedIn } from "./api/client";
 
 type Page = "entry" | "login" | "signup" | "dashboard" | "family-members";
@@ -18,6 +19,12 @@ export default function App() {
     clearSession();
     setCurrentPage("login");
   };
+
+  // Public share links (/share/:token) bypass auth entirely.
+  const shareMatch = window.location.pathname.match(/^\/share\/([^/]+)$/);
+  if (shareMatch) {
+    return <SharedDocumentsPage token={decodeURIComponent(shareMatch[1])} />;
+  }
 
   return (
     <div className="size-full">

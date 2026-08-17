@@ -45,6 +45,23 @@ export function getDocuments(): Promise<DocumentItem[]> {
   return apiRequest<DocumentItem[]>("/documents");
 }
 
+export interface MetricPoint {
+  date: string;
+  value: number;
+}
+
+export interface MetricSeries {
+  name: string;
+  unit: string;
+  reference_range: string;
+  points: MetricPoint[];
+}
+
+// Time series of lab-report metrics extracted via OCR, grouped by metric name.
+export function getMetrics(): Promise<{ metrics: MetricSeries[] }> {
+  return apiRequest<{ metrics: MetricSeries[] }>("/documents/metrics");
+}
+
 export function getDocument(id: number): Promise<DocumentItem> {
   return apiRequest<DocumentItem>(`/documents/${id}`);
 }
