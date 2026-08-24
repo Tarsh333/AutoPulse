@@ -437,7 +437,7 @@ export default function Dashboard({
       {/* Right Panel - Appointment */}
       <div className="w-80 bg-white border-l border-[#D6E4F5] p-6">
         <h3 className="text-[#1F3E72] mb-6">Next Appointment</h3>
-        <AppointmentCard scope={memberId ? `member-${memberId}` : "self"} />
+        <AppointmentCard memberId={memberId} />
       </div>
 
       {/* Modals */}

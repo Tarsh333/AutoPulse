@@ -27,18 +27,3 @@ export function googleCalendarUrl(appt: Appointment): string {
 
   return `https://calendar.google.com/calendar/render?${params.toString()}`;
 }
-
-const keyFor = (scope: string) => `autopulse_appointment_${scope}`;
-
-export function loadAppointment(scope: string): Appointment | null {
-  const raw = localStorage.getItem(keyFor(scope));
-  return raw ? (JSON.parse(raw) as Appointment) : null;
-}
-
-export function saveAppointment(scope: string, appt: Appointment) {
-  localStorage.setItem(keyFor(scope), JSON.stringify(appt));
-}
-
-export function clearAppointment(scope: string) {
-  localStorage.removeItem(keyFor(scope));
-}

@@ -1,17 +1,19 @@
 import { useEffect, useState } from "react";
 import { CalendarPlus, Pencil } from "lucide-react";
+import { Appointment, googleCalendarUrl } from "../lib/calendar";
 import {
-  Appointment,
-  googleCalendarUrl,
-  loadAppointment,
+  getAppointment,
   saveAppointment,
   clearAppointment,
-} from "../lib/calendar";
+} from "../api/appointments";
 
-// `scope` isolates the stored appointment per member (or "self").
-export default function AppointmentCard({ scope }: { scope: string }) {
+// `memberId` scopes the appointment to a managed member (undefined = self).
+export default function AppointmentCard({ memberId }: { memberId?: number }) {
   const [appt, setAppt] = useState<Appointment | null>(null);
   const [editing, setEditing] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
@@ -20,22 +22,31 @@ export default function AppointmentCard({ scope }: { scope: string }) {
   const [location, setLocation] = useState("");
   const [notes, setNotes] = useState("");
 
-  useEffect(() => {
-    const a = loadAppointment(scope);
-    setAppt(a);
-    setEditing(!a); // if none yet, open the form
-    if (a) {
-      setTitle(a.title);
-      setDate(a.date);
-      setTime(a.time);
-      setDuration(String(a.durationMins));
-      setLocation(a.location ?? "");
-      setNotes(a.notes ?? "");
-    }
-  }, [scope]);
+  const fillForm = (a: Appointment | null) => {
+    setTitle(a?.title ?? "");
+    setDate(a?.date ?? "");
+    setTime(a?.time ?? "");
+    setDuration(a ? String(a.durationMins) : "30");
+    setLocation(a?.location ?? "");
+    setNotes(a?.notes ?? "");
+  };
 
-  const handleSave = (e: React.FormEvent) => {
+  useEffect(() => {
+    setLoading(true);
+    getAppointment(memberId)
+      .then((a) => {
+        setAppt(a);
+        setEditing(!a);
+        fillForm(a);
+      })
+      .catch((e) => setError((e as Error).message))
+      .finally(() => setLoading(false));
+  }, [memberId]);
+
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
+    setSaving(true);
     const next: Appointment = {
       title,
       date,
@@ -44,29 +55,43 @@ export default function AppointmentCard({ scope }: { scope: string }) {
       location: location || undefined,
       notes: notes || undefined,
     };
-    saveAppointment(scope, next);
-    setAppt(next);
-    setEditing(false);
+    try {
+      await saveAppointment(next, memberId);
+      setAppt(next);
+      setEditing(false);
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleClear = () => {
-    clearAppointment(scope);
-    setAppt(null);
-    setTitle("");
-    setDate("");
-    setTime("");
-    setDuration("30");
-    setLocation("");
-    setNotes("");
-    setEditing(true);
+  const handleClear = async () => {
+    try {
+      await clearAppointment(memberId);
+      setAppt(null);
+      fillForm(null);
+      setEditing(true);
+    } catch (err) {
+      setError((err as Error).message);
+    }
   };
 
   const inputClass =
     "w-full px-3 py-2 border border-[#D6E4F5] rounded-lg focus:outline-none focus:border-[#2F5D9F] bg-white text-sm";
 
+  if (loading) {
+    return <p className="text-[#5C7BA8] text-sm">Loading...</p>;
+  }
+
   if (editing || !appt) {
     return (
       <form onSubmit={handleSave} className="space-y-3">
+        {error && (
+          <div className="p-2 rounded-lg bg-red-50 text-red-600 text-xs">
+            {error}
+          </div>
+        )}
         <input
           className={inputClass}
           placeholder="Doctor / title"
@@ -116,7 +141,10 @@ export default function AppointmentCard({ scope }: { scope: string }) {
           {appt && (
             <button
               type="button"
-              onClick={() => setEditing(false)}
+              onClick={() => {
+                fillForm(appt);
+                setEditing(false);
+              }}
               className="flex-1 py-2 border border-[#D6E4F5] text-[#1F3E72] rounded-lg text-sm"
             >
               Cancel
@@ -124,9 +152,10 @@ export default function AppointmentCard({ scope }: { scope: string }) {
           )}
           <button
             type="submit"
-            className="flex-1 py-2 bg-[#2F5D9F] text-white rounded-lg text-sm hover:bg-[#1F3E72]"
+            disabled={saving}
+            className="flex-1 py-2 bg-[#2F5D9F] text-white rounded-lg text-sm hover:bg-[#1F3E72] disabled:opacity-60"
           >
-            Save
+            {saving ? "Saving..." : "Save"}
           </button>
         </div>
       </form>
@@ -145,19 +174,19 @@ export default function AppointmentCard({ scope }: { scope: string }) {
           <Pencil size={14} />
         </button>
       </div>
-      <p className="text-[#1F3E72] mb-1">{appt!.title}</p>
+      <p className="text-[#1F3E72] mb-1">{appt.title}</p>
       <p className="text-[#5C7BA8]">
-        {new Date(`${appt!.date}T${appt!.time}:00`).toLocaleString([], {
+        {new Date(`${appt.date}T${appt.time}:00`).toLocaleString([], {
           dateStyle: "medium",
           timeStyle: "short",
         })}
       </p>
-      {appt!.location && (
-        <p className="text-[#5C7BA8] text-sm mt-1">{appt!.location}</p>
+      {appt.location && (
+        <p className="text-[#5C7BA8] text-sm mt-1">{appt.location}</p>
       )}
 
       <a
-        href={googleCalendarUrl(appt!)}
+        href={googleCalendarUrl(appt)}
         target="_blank"
         rel="noopener noreferrer"
         className="mt-4 w-full inline-flex items-center justify-center gap-2 py-2.5 bg-[#2F5D9F] text-white rounded-lg hover:bg-[#1F3E72] transition-colors text-sm"
