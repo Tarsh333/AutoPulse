@@ -64,7 +64,7 @@ export default function AppointmentCard({ scope }: { scope: string }) {
   const inputClass =
     "w-full px-3 py-2 border border-[#D6E4F5] rounded-lg focus:outline-none focus:border-[#2F5D9F] bg-white text-sm";
 
-  if (editing) {
+  if (editing || !appt) {
     return (
       <form onSubmit={handleSave} className="space-y-3">
         <input
