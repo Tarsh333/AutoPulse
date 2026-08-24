@@ -7,11 +7,13 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
-import { Search, Users, LogOut, RefreshCw } from "lucide-react";
+import { Search, Users, LogOut, RefreshCw, Pencil, ArrowLeft } from "lucide-react";
 import AddPrescriptionModal from "./AddPrescriptionModal";
 import AddReportModal from "./AddReportModal";
 import ShareQRModal from "./ShareQRModal";
 import ExtractedView from "./ExtractedView";
+import EditProfileModal from "./EditProfileModal";
+import { ActiveMember } from "../App";
 import { getProfile, Profile } from "../api/profile";
 import {
   getDocuments,
@@ -25,7 +27,9 @@ import {
 // Appointment card has no backend endpoint yet — kept as mock UI.
 
 interface DashboardProps {
+  activeMember: ActiveMember | null;
   onNavigateToMembers: () => void;
+  onViewSelf: () => void;
   onLogout: () => void;
 }
 
@@ -59,15 +63,21 @@ const statusStyles: Record<string, string> = {
 };
 
 export default function Dashboard({
+  activeMember,
   onNavigateToMembers,
+  onViewSelf,
   onLogout,
 }: DashboardProps) {
+  // When managing a family member, scope all data to their id.
+  const memberId = activeMember?.id;
+
   const [metrics, setMetrics] = useState<MetricSeries[]>([]);
   const [selectedMetric, setSelectedMetric] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
   const [showPrescriptionModal, setShowPrescriptionModal] = useState(false);
   const [showReportModal, setShowReportModal] = useState(false);
   const [showQRModal, setShowQRModal] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false);
 
   const [profile, setProfile] = useState<Profile | null>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
@@ -76,7 +86,7 @@ export default function Dashboard({
 
   const loadMetrics = async () => {
     try {
-      const { metrics } = await getMetrics();
+      const { metrics } = await getMetrics(memberId);
       setMetrics(metrics);
       setSelectedMetric((prev) =>
         prev && metrics.some((m) => m.name === prev)
@@ -90,19 +100,25 @@ export default function Dashboard({
 
   const loadDocuments = async () => {
     try {
-      setDocuments(await getDocuments());
+      setDocuments(await getDocuments(memberId));
       await loadMetrics();
     } catch (err) {
       setError((err as Error).message);
     }
   };
 
-  useEffect(() => {
-    getProfile()
+  const loadProfile = () => {
+    getProfile(memberId)
       .then(setProfile)
       .catch((err) => setError((err as Error).message));
+  };
+
+  // Reload everything when switching between self and a member.
+  useEffect(() => {
+    loadProfile();
     loadDocuments();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [memberId]);
 
   // Poll while any document is still being processed by the worker.
   useEffect(() => {
@@ -164,7 +180,31 @@ export default function Dashboard({
           </button>
         </div>
 
-        <h3 className="text-[#1F3E72] mb-6">Basic Details</h3>
+        {activeMember && (
+          <div className="mb-6 p-3 rounded-xl bg-[#EAF2FB] flex items-center justify-between">
+            <span className="text-sm text-[#1F3E72]">
+              Managing <b>{activeMember.name}</b>
+            </span>
+            <button
+              onClick={onViewSelf}
+              title="Back to my dashboard"
+              className="flex items-center gap-1 text-[#2F5D9F] hover:text-[#1F3E72] text-sm"
+            >
+              <ArrowLeft size={14} /> Me
+            </button>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-[#1F3E72]">Basic Details</h3>
+          <button
+            onClick={() => setShowProfileModal(true)}
+            title="Edit details"
+            className="flex items-center gap-1 text-[#2F5D9F] hover:text-[#1F3E72] text-sm"
+          >
+            <Pencil size={15} /> Edit
+          </button>
+        </div>
 
         <div className="space-y-6">
           <div className="flex flex-col items-center pb-6 border-b border-[#D6E4F5]">
@@ -214,7 +254,11 @@ export default function Dashboard({
           )}
 
           {/* Top Actions */}
-          <div className="grid grid-cols-3 gap-4">
+          <div
+            className={`grid ${
+              memberId ? "grid-cols-2" : "grid-cols-3"
+            } gap-4`}
+          >
             <button
               onClick={() => setShowPrescriptionModal(true)}
               className="p-6 bg-white border border-[#D6E4F5] rounded-xl hover:border-[#2F5D9F] transition-colors text-[#1F3E72]"
@@ -227,12 +271,14 @@ export default function Dashboard({
             >
               Add Report
             </button>
-            <button
-              onClick={() => setShowQRModal(true)}
-              className="p-6 bg-white border border-[#D6E4F5] rounded-xl hover:border-[#2F5D9F] transition-colors text-[#1F3E72]"
-            >
-              Share QR
-            </button>
+            {!memberId && (
+              <button
+                onClick={() => setShowQRModal(true)}
+                className="p-6 bg-white border border-[#D6E4F5] rounded-xl hover:border-[#2F5D9F] transition-colors text-[#1F3E72]"
+              >
+                Share QR
+              </button>
+            )}
           </div>
 
           {/* Health Data Graph — from extracted lab-report metrics */}
@@ -297,7 +343,9 @@ export default function Dashboard({
 
           {/* Documents */}
           <div className="bg-white rounded-xl p-6 border border-[#D6E4F5]">
-            <h3 className="text-[#1F3E72] mb-4">My Documents</h3>
+            <h3 className="text-[#1F3E72] mb-4">
+              {activeMember ? `${activeMember.name}'s Documents` : "My Documents"}
+            </h3>
 
             <div className="relative mb-4">
               <Search
@@ -400,12 +448,14 @@ export default function Dashboard({
       {/* Modals */}
       {showPrescriptionModal && (
         <AddPrescriptionModal
+          memberId={memberId}
           onClose={() => setShowPrescriptionModal(false)}
           onUploaded={loadDocuments}
         />
       )}
       {showReportModal && (
         <AddReportModal
+          memberId={memberId}
           onClose={() => setShowReportModal(false)}
           onUploaded={loadDocuments}
         />
@@ -414,6 +464,17 @@ export default function Dashboard({
         <ShareQRModal
           documents={documents}
           onClose={() => setShowQRModal(false)}
+        />
+      )}
+      {showProfileModal && (
+        <EditProfileModal
+          profile={profile}
+          memberId={memberId}
+          onClose={() => setShowProfileModal(false)}
+          onSaved={() => {
+            setShowProfileModal(false);
+            loadProfile();
+          }}
         />
       )}
     </div>

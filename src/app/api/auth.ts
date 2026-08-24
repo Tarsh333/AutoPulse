@@ -20,15 +20,15 @@ export async function register(
   return data;
 }
 
-// Main member login (backend authenticates by name + password).
+// Main member login (backend authenticates by email + password).
 export async function login(
-  name: string,
+  email: string,
   password: string
 ): Promise<AuthResult> {
   const data = await apiRequest<AuthResult>("/auth/login", {
     method: "POST",
     auth: false,
-    body: { name, password },
+    body: { email, password },
   });
   setSession(data.token, data.user);
   return data;

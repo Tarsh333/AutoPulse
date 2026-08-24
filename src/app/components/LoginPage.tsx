@@ -12,8 +12,8 @@ export default function LoginPage({
 }) {
   const [mode, setMode] = useState<Mode>("password");
 
-  // Main member (name + password)
-  const [name, setName] = useState("");
+  // Main member (email + password)
+  const [loginEmail, setLoginEmail] = useState("");
   const [password, setPassword] = useState("");
 
   // Family member (email + OTP)
@@ -29,7 +29,7 @@ export default function LoginPage({
     setError("");
     setLoading(true);
     try {
-      await login(name, password);
+      await login(loginEmail, password);
       onLogin();
     } catch (err) {
       setError((err as Error).message);
@@ -120,13 +120,13 @@ export default function LoginPage({
         {mode === "password" ? (
           <form onSubmit={handlePasswordLogin} className="space-y-5">
             <div>
-              <label className="block text-[#1F3E72] mb-2">Name</label>
+              <label className="block text-[#1F3E72] mb-2">Email</label>
               <input
-                type="text"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
+                type="email"
+                value={loginEmail}
+                onChange={(e) => setLoginEmail(e.target.value)}
                 className={inputClass}
-                placeholder="Enter your name"
+                placeholder="Enter your email"
                 required
               />
             </div>

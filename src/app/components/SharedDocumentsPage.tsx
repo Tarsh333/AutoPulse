@@ -84,7 +84,7 @@ export default function SharedDocumentsPage({ token }: { token: string }) {
                       onClick={() => handleDownload(doc.id)}
                       className="text-[#2F5D9F] hover:underline"
                     >
-                      Download
+                      View
                     </button>
                   </div>
                 </div>

@@ -9,14 +9,23 @@ import { clearSession, isLoggedIn } from "./api/client";
 
 type Page = "entry" | "login" | "signup" | "dashboard" | "family-members";
 
+export interface ActiveMember {
+  id: number;
+  name: string;
+}
+
 export default function App() {
   // If a valid session already exists, land straight on the dashboard.
   const [currentPage, setCurrentPage] = useState<Page>(
     isLoggedIn() ? "dashboard" : "entry"
   );
 
+  // null = viewing your own dashboard; otherwise a family member you manage.
+  const [activeMember, setActiveMember] = useState<ActiveMember | null>(null);
+
   const handleLogout = () => {
     clearSession();
+    setActiveMember(null);
     setCurrentPage("login");
   };
 
@@ -48,13 +57,21 @@ export default function App() {
 
       {currentPage === "dashboard" && (
         <Dashboard
+          activeMember={activeMember}
           onNavigateToMembers={() => setCurrentPage("family-members")}
+          onViewSelf={() => setActiveMember(null)}
           onLogout={handleLogout}
         />
       )}
 
       {currentPage === "family-members" && (
-        <FamilyMembersPage onBack={() => setCurrentPage("dashboard")} />
+        <FamilyMembersPage
+          onBack={() => setCurrentPage("dashboard")}
+          onSelectMember={(m) => {
+            setActiveMember(m);
+            setCurrentPage("dashboard");
+          }}
+        />
       )}
     </div>
   );

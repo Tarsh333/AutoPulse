@@ -41,8 +41,11 @@ export interface DocumentItem {
   created_at: string;
 }
 
-export function getDocuments(): Promise<DocumentItem[]> {
-  return apiRequest<DocumentItem[]>("/documents");
+const memberQuery = (memberId?: number) =>
+  memberId ? `?memberId=${memberId}` : "";
+
+export function getDocuments(memberId?: number): Promise<DocumentItem[]> {
+  return apiRequest<DocumentItem[]>(`/documents${memberQuery(memberId)}`);
 }
 
 export interface MetricPoint {
@@ -58,8 +61,12 @@ export interface MetricSeries {
 }
 
 // Time series of lab-report metrics extracted via OCR, grouped by metric name.
-export function getMetrics(): Promise<{ metrics: MetricSeries[] }> {
-  return apiRequest<{ metrics: MetricSeries[] }>("/documents/metrics");
+export function getMetrics(
+  memberId?: number
+): Promise<{ metrics: MetricSeries[] }> {
+  return apiRequest<{ metrics: MetricSeries[] }>(
+    `/documents/metrics${memberQuery(memberId)}`
+  );
 }
 
 export function getDocument(id: number): Promise<DocumentItem> {
@@ -68,12 +75,16 @@ export function getDocument(id: number): Promise<DocumentItem> {
 
 export function uploadDocument(
   file: File,
-  category?: string
+  category?: string,
+  memberId?: number
 ): Promise<DocumentItem> {
   const form = new FormData();
   form.append("file", file);
   if (category) {
     form.append("category", category);
+  }
+  if (memberId) {
+    form.append("memberId", String(memberId));
   }
   return apiRequest<DocumentItem>("/documents", {
     method: "POST",

@@ -3,9 +3,11 @@ import { X } from "lucide-react";
 import { uploadDocument } from "../api/documents";
 
 export default function AddReportModal({
+  memberId,
   onClose,
   onUploaded,
 }: {
+  memberId?: number;
   onClose: () => void;
   onUploaded?: () => void;
 }) {
@@ -14,6 +16,7 @@ export default function AddReportModal({
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,7 +27,7 @@ export default function AddReportModal({
     setError("");
     setUploading(true);
     try {
-      await uploadDocument(file, category || "lab_report");
+      await uploadDocument(file, category || "lab_report", memberId);
       onUploaded?.();
       onClose();
     } catch (err) {
@@ -80,13 +83,33 @@ export default function AddReportModal({
               onChange={(e) => setFile(e.target.files?.[0] ?? null)}
               className="hidden"
             />
-            <button
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full py-3 border border-[#2F5D9F] text-[#2F5D9F] rounded-lg hover:bg-[#EAF2FB] transition-colors truncate px-4"
-            >
-              {file ? file.name : "Choose File (PDF or image)"}
-            </button>
+            <input
+              ref={cameraInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+              className="hidden"
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="py-3 border border-[#2F5D9F] text-[#2F5D9F] rounded-lg hover:bg-[#EAF2FB] transition-colors"
+              >
+                Choose File
+              </button>
+              <button
+                type="button"
+                onClick={() => cameraInputRef.current?.click()}
+                className="py-3 border border-[#2F5D9F] text-[#2F5D9F] rounded-lg hover:bg-[#EAF2FB] transition-colors"
+              >
+                Take Photo
+              </button>
+            </div>
+            {file && (
+              <p className="mt-2 text-sm text-[#5C7BA8] truncate">{file.name}</p>
+            )}
           </div>
 
           <button

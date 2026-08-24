@@ -21,11 +21,19 @@ export interface ProfileUpdate {
   bloodGroup?: string | null;
 }
 
-export function getProfile(): Promise<Profile> {
-  return apiRequest<Profile>("/profile");
+export function getProfile(memberId?: number): Promise<Profile> {
+  return apiRequest<Profile>(
+    `/profile${memberId ? `?memberId=${memberId}` : ""}`
+  );
 }
 
 // Backend returns only a message here, so nothing meaningful to return.
-export async function updateProfile(update: ProfileUpdate): Promise<void> {
-  await apiRequest("/profile", { method: "PUT", body: update });
+export async function updateProfile(
+  update: ProfileUpdate,
+  memberId?: number
+): Promise<void> {
+  await apiRequest("/profile", {
+    method: "PUT",
+    body: memberId ? { ...update, memberId } : update,
+  });
 }

@@ -5,6 +5,7 @@ import { getMembers, addMember, FamilyMember } from "../api/members";
 
 interface FamilyMembersPageProps {
   onBack: () => void;
+  onSelectMember: (m: { id: number; name: string }) => void;
 }
 
 function initials(name: string) {
@@ -16,7 +17,10 @@ function initials(name: string) {
     .slice(0, 2);
 }
 
-export default function FamilyMembersPage({ onBack }: FamilyMembersPageProps) {
+export default function FamilyMembersPage({
+  onBack,
+  onSelectMember,
+}: FamilyMembersPageProps) {
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -87,7 +91,10 @@ export default function FamilyMembersPage({ onBack }: FamilyMembersPageProps) {
             {members.map((member) => (
               <div
                 key={member.id}
-                className="bg-white p-6 rounded-xl border-2 border-[#D6E4F5] shadow-sm"
+                onClick={() =>
+                  onSelectMember({ id: member.id, name: member.name })
+                }
+                className="bg-white p-6 rounded-xl border-2 border-[#D6E4F5] shadow-sm cursor-pointer hover:border-[#2F5D9F] hover:shadow-md transition-all"
               >
                 <div className="flex flex-col items-center text-center space-y-4">
                   <div className="w-20 h-20 rounded-full bg-[#2F5D9F] text-white flex items-center justify-center text-xl">
