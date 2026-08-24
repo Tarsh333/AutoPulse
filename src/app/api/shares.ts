@@ -5,11 +5,17 @@ interface CreateShareResult {
   token: string;
   expires_at: string;
   ttl_seconds: number;
+  document_count: number;
 }
 
-// Requires auth — creates a 30-minute share token for my documents.
-export function createShare(): Promise<CreateShareResult> {
-  return apiRequest<CreateShareResult>("/shares", { method: "POST" });
+// Requires auth — creates a 30-minute share token for the selected documents.
+export function createShare(
+  documentIds: number[]
+): Promise<CreateShareResult> {
+  return apiRequest<CreateShareResult>("/shares", {
+    method: "POST",
+    body: { documentIds },
+  });
 }
 
 // Documents come back without storage_path/error fields, but the shared subset

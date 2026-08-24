@@ -410,7 +410,12 @@ export default function Dashboard({
           onUploaded={loadDocuments}
         />
       )}
-      {showQRModal && <ShareQRModal onClose={() => setShowQRModal(false)} />}
+      {showQRModal && (
+        <ShareQRModal
+          documents={documents}
+          onClose={() => setShowQRModal(false)}
+        />
+      )}
     </div>
   );
 }
