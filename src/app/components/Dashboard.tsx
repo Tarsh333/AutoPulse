@@ -13,6 +13,7 @@ import AddReportModal from "./AddReportModal";
 import ShareQRModal from "./ShareQRModal";
 import ExtractedView from "./ExtractedView";
 import EditProfileModal from "./EditProfileModal";
+import AppointmentCard from "./AppointmentCard";
 import { ActiveMember } from "../App";
 import { getProfile, Profile } from "../api/profile";
 import {
@@ -433,16 +434,10 @@ export default function Dashboard({
         </div>
       </div>
 
-      {/* Right Panel - Appointment (mock) */}
+      {/* Right Panel - Appointment */}
       <div className="w-80 bg-white border-l border-[#D6E4F5] p-6">
         <h3 className="text-[#1F3E72] mb-6">Next Appointment</h3>
-
-        <div className="p-6 border border-[#D6E4F5] rounded-xl bg-[#EAF2FB]">
-          <p className="text-sm text-[#5C7BA8] mb-2">Upcoming</p>
-          <p className="text-[#1F3E72] mb-1">Dr. Emily Carter</p>
-          <p className="text-[#5C7BA8]">April 25, 2026</p>
-          <p className="text-[#5C7BA8]">10:30 AM</p>
-        </div>
+        <AppointmentCard scope={memberId ? `member-${memberId}` : "self"} />
       </div>
 
       {/* Modals */}
