@@ -106,6 +106,16 @@ export function reExtractDocument(id: number): Promise<unknown> {
   return apiRequest(`/documents/${id}/extract`, { method: "POST" });
 }
 
+export function renameDocument(
+  id: number,
+  fileName: string
+): Promise<{ id: number; file_name: string }> {
+  return apiRequest(`/documents/${id}`, {
+    method: "PATCH",
+    body: { file_name: fileName },
+  });
+}
+
 export function deleteDocument(id: number): Promise<unknown> {
   return apiRequest(`/documents/${id}`, { method: "DELETE" });
 }

@@ -7,7 +7,16 @@ import {
   CartesianGrid,
   ResponsiveContainer,
 } from "recharts";
-import { Search, Users, LogOut, RefreshCw, Pencil, ArrowLeft } from "lucide-react";
+import {
+  Search,
+  Users,
+  LogOut,
+  RefreshCw,
+  Pencil,
+  ArrowLeft,
+  Check,
+  X,
+} from "lucide-react";
 import AddPrescriptionModal from "./AddPrescriptionModal";
 import AddReportModal from "./AddReportModal";
 import ShareQRModal from "./ShareQRModal";
@@ -20,6 +29,7 @@ import {
   getDocuments,
   getDownloadUrl,
   reExtractDocument,
+  renameDocument,
   getMetrics,
   MetricSeries,
   DocumentItem,
@@ -83,6 +93,8 @@ export default function Dashboard({
   const [profile, setProfile] = useState<Profile | null>(null);
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
+  const [renamingId, setRenamingId] = useState<number | null>(null);
+  const [renameValue, setRenameValue] = useState("");
   const [error, setError] = useState("");
 
   const loadMetrics = async () => {
@@ -149,6 +161,23 @@ export default function Dashboard({
     }
   };
 
+  const startRename = (doc: DocumentItem) => {
+    setRenamingId(doc.id);
+    setRenameValue(doc.file_name);
+  };
+
+  const saveRename = async (id: number) => {
+    const name = renameValue.trim();
+    if (!name) return;
+    try {
+      await renameDocument(id, name);
+      setRenamingId(null);
+      await loadDocuments();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   const filtered = documents.filter((d) =>
     d.file_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -162,9 +191,9 @@ export default function Dashboard({
     : [];
 
   return (
-    <div className="min-h-screen bg-[#EAF2FB] flex">
+    <div className="min-h-screen bg-[#EAF2FB] flex flex-col lg:flex-row">
       {/* Left Panel - Basic Details */}
-      <div className="w-80 bg-white border-r border-[#D6E4F5] p-6">
+      <div className="w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-[#D6E4F5] p-6">
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={onNavigateToMembers}
@@ -246,7 +275,7 @@ export default function Dashboard({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 p-8">
+      <div className="flex-1 p-4 lg:p-8">
         <div className="max-w-6xl mx-auto space-y-6">
           {error && (
             <div className="p-4 rounded-xl bg-red-50 text-red-600 text-sm">
@@ -256,9 +285,9 @@ export default function Dashboard({
 
           {/* Top Actions */}
           <div
-            className={`grid ${
-              memberId ? "grid-cols-2" : "grid-cols-3"
-            } gap-4`}
+            className={`grid gap-4 grid-cols-1 ${
+              memberId ? "sm:grid-cols-2" : "sm:grid-cols-3"
+            }`}
           >
             <button
               onClick={() => setShowPrescriptionModal(true)}
@@ -371,17 +400,55 @@ export default function Dashboard({
                     key={doc.id}
                     className="border border-[#D6E4F5] rounded-lg hover:bg-[#EAF2FB] transition-colors"
                   >
-                    <div className="flex items-center justify-between p-4">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div className="min-w-0">
-                        <p className="text-[#1F3E72] truncate">
-                          {doc.file_name}
-                        </p>
+                        {renamingId === doc.id ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              autoFocus
+                              value={renameValue}
+                              onChange={(e) => setRenameValue(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") saveRename(doc.id);
+                                if (e.key === "Escape") setRenamingId(null);
+                              }}
+                              className="flex-1 min-w-0 px-2 py-1 border border-[#D6E4F5] rounded-lg text-sm focus:outline-none focus:border-[#2F5D9F]"
+                            />
+                            <button
+                              onClick={() => saveRename(doc.id)}
+                              title="Save"
+                              className="text-green-600 hover:text-green-700"
+                            >
+                              <Check size={18} />
+                            </button>
+                            <button
+                              onClick={() => setRenamingId(null)}
+                              title="Cancel"
+                              className="text-[#5C7BA8] hover:text-[#1F3E72]"
+                            >
+                              <X size={18} />
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <p className="text-[#1F3E72] truncate">
+                              {doc.file_name}
+                            </p>
+                            <button
+                              onClick={() => startRename(doc)}
+                              title="Rename"
+                              className="text-[#5C7BA8] hover:text-[#2F5D9F] shrink-0"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          </div>
+                        )}
                         <p className="text-sm text-[#5C7BA8]">
                           {new Date(doc.created_at).toLocaleDateString()}
                           {doc.category ? ` · ${doc.category}` : ""}
                         </p>
                       </div>
-                      <div className="flex items-center gap-3 shrink-0">
+                      <div className="flex items-center flex-wrap gap-3 sm:shrink-0">
                         <span
                           className={`text-xs px-2 py-1 rounded-full ${
                             statusStyles[doc.extraction_status] ??
@@ -435,7 +502,7 @@ export default function Dashboard({
       </div>
 
       {/* Right Panel - Appointment */}
-      <div className="w-80 bg-white border-l border-[#D6E4F5] p-6">
+      <div className="w-full lg:w-80 bg-white border-t lg:border-t-0 lg:border-l border-[#D6E4F5] p-6">
         <h3 className="text-[#1F3E72] mb-6">Next Appointment</h3>
         <AppointmentCard memberId={memberId} />
       </div>
