@@ -93,7 +93,7 @@ export default function LoginPage({
                 : "text-[#5C7BA8]"
             }`}
           >
-            Main Member
+            Login with Password
           </button>
           <button
             type="button"
@@ -107,7 +107,7 @@ export default function LoginPage({
                 : "text-[#5C7BA8]"
             }`}
           >
-            Family Member (OTP)
+            Login with OTP
           </button>
         </div>
 

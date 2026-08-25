@@ -25,3 +25,8 @@ export function addMember(
     body: { name, email, relationship },
   });
 }
+
+// MAIN_MEMBER only.
+export function deleteMember(id: number): Promise<unknown> {
+  return apiRequest(`/members/${id}`, { method: "DELETE" });
+}
