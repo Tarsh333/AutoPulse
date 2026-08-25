@@ -16,6 +16,9 @@ import {
   ArrowLeft,
   Check,
   X,
+  TrendingUp,
+  TrendingDown,
+  Minus,
 } from "lucide-react";
 import AddPrescriptionModal from "./AddPrescriptionModal";
 import AddReportModal from "./AddReportModal";
@@ -24,6 +27,7 @@ import ExtractedView from "./ExtractedView";
 import EditProfileModal from "./EditProfileModal";
 import AppointmentCard from "./AppointmentCard";
 import { ActiveMember } from "../App";
+import { interpretSeries } from "../lib/metrics";
 import { getProfile, Profile } from "../api/profile";
 import {
   getDocuments,
@@ -189,6 +193,20 @@ export default function Dashboard({
         value: p.value,
       }))
     : [];
+  const interpretation = activeSeries ? interpretSeries(activeSeries) : null;
+
+  const statusChip: Record<string, string> = {
+    normal: "bg-green-50 text-green-700",
+    high: "bg-red-50 text-red-700",
+    low: "bg-amber-50 text-amber-700",
+    unknown: "bg-gray-100 text-gray-500",
+  };
+  const trendChip: Record<string, string> = {
+    improving: "bg-green-50 text-green-700",
+    worsening: "bg-red-50 text-red-700",
+    stable: "bg-blue-50 text-blue-700",
+    none: "bg-gray-100 text-gray-500",
+  };
 
   return (
     <div className="min-h-screen bg-[#EAF2FB] flex flex-col lg:flex-row">
@@ -363,11 +381,33 @@ export default function Dashboard({
               </ResponsiveContainer>
             )}
 
-            {activeSeries?.reference_range && (
-              <p className="text-sm text-[#5C7BA8] mt-3 text-center">
-                Reference range: {activeSeries.reference_range}
-                {activeSeries.unit ? ` ${activeSeries.unit}` : ""}
-              </p>
+            {interpretation && chartData.length > 0 && (
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span
+                  className={`text-sm px-3 py-1 rounded-full ${
+                    statusChip[interpretation.status]
+                  }`}
+                >
+                  {interpretation.statusLabel}
+                </span>
+                <span
+                  className={`text-sm px-3 py-1 rounded-full inline-flex items-center gap-1 ${
+                    trendChip[interpretation.trend]
+                  }`}
+                >
+                  {interpretation.trend === "improving" && <TrendingUp size={14} />}
+                  {interpretation.trend === "worsening" && <TrendingDown size={14} />}
+                  {(interpretation.trend === "stable" ||
+                    interpretation.trend === "none") && <Minus size={14} />}
+                  {interpretation.trendLabel}
+                </span>
+                {activeSeries?.reference_range && (
+                  <span className="text-sm text-[#5C7BA8] ml-auto">
+                    Normal: {activeSeries.reference_range}
+                    {activeSeries.unit ? ` ${activeSeries.unit}` : ""}
+                  </span>
+                )}
+              </div>
             )}
           </div>
 
