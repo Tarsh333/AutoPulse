@@ -15,6 +15,7 @@ export default function ShareQRModal({
 }) {
   // Step 1: pick documents. Step 2: show the QR.
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [query, setQuery] = useState("");
   const [shareUrl, setShareUrl] = useState("");
   const [expiresAt, setExpiresAt] = useState<number | null>(null);
   const [remaining, setRemaining] = useState(0);
@@ -133,8 +134,20 @@ export default function ShareQRModal({
                 You have no documents to share yet.
               </p>
             ) : (
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {documents.map((doc) => (
+              <>
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search documents…"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-[#2F5D9F]/30 focus:border-[#2F5D9F]"
+                />
+              <div className="space-y-2 max-h-64 overflow-y-auto mt-2">
+                {documents
+                  .filter((doc) =>
+                    doc.file_name.toLowerCase().includes(query.toLowerCase())
+                  )
+                  .map((doc) => (
                   <label
                     key={doc.id}
                     className="flex items-center gap-3 p-3 border border-[#D6E4F5] rounded-lg cursor-pointer hover:bg-[#EAF2FB]"
@@ -155,6 +168,7 @@ export default function ShareQRModal({
                   </label>
                 ))}
               </div>
+              </>
             )}
 
             <button
