@@ -31,7 +31,7 @@ import AppointmentCard from "./AppointmentCard";
 import Reveal from "./Reveal";
 import EmptyState from "./EmptyState";
 import ChatWidget from "./ChatWidget";
-import { FileText } from "lucide-react";
+import { FileText, Trash2 } from "lucide-react";
 import { ActiveMember } from "../App";
 import { interpretSeries } from "../lib/metrics";
 import { getUser } from "../api/client";
@@ -41,6 +41,7 @@ import {
   getDownloadUrl,
   reExtractDocument,
   renameDocument,
+  deleteDocument,
   getMetrics,
   MetricSeries,
   DocumentItem,
@@ -119,8 +120,8 @@ export default function Dashboard({
     const mobile =
       typeof window !== "undefined" && window.innerWidth < 1024;
     return mobile
-      ? { details: false, graph: false, docs: true, appt: false }
-      : { details: true, graph: true, docs: true, appt: true };
+      ? { details: false, graph: false, docs: false, appt: false }
+      : { details: true, graph: true, docs: false, appt: true };
   });
   const toggle = (k: keyof typeof open) =>
     setOpen((o) => ({ ...o, [k]: !o[k] }));
@@ -190,6 +191,17 @@ export default function Dashboard({
     }
   };
 
+  const handleDeleteDoc = async (doc: DocumentItem) => {
+    if (!confirm(`Delete "${doc.file_name}"? This cannot be undone.`)) return;
+    try {
+      await deleteDocument(doc.id);
+      toast.success("Document deleted");
+      await loadDocuments();
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
   const startRename = (doc: DocumentItem) => {
     setRenamingId(doc.id);
     setRenameValue(doc.file_name);
@@ -234,12 +246,19 @@ export default function Dashboard({
     none: "bg-gray-100 text-gray-500",
   };
 
-  // Mobile-only collapse toggle for a section.
-  const Chevron = ({ k }: { k: keyof typeof open }) => (
+  // Collapse toggle for a section. Mobile-only by default; pass `always` to
+  // show it on all breakpoints too.
+  const Chevron = ({
+    k,
+    always = false,
+  }: {
+    k: keyof typeof open;
+    always?: boolean;
+  }) => (
     <button
       type="button"
       onClick={() => toggle(k)}
-      className="lg:hidden text-[#5C7BA8]"
+      className={`${always ? "" : "lg:hidden "}text-[#5C7BA8]`}
       aria-label="Toggle section"
     >
       <ChevronDown
@@ -470,10 +489,10 @@ export default function Dashboard({
               <h3 className="text-[#1F3E72]">
                 {activeMember ? `${activeMember.name}'s Documents` : "My Documents"}
               </h3>
-              <Chevron k="docs" />
+              <Chevron k="docs" always />
             </div>
 
-            <div className={`${open.docs ? "" : "hidden "}lg:block`}>
+            <div className={open.docs ? "" : "hidden"}>
             <div className="relative mb-4">
               <Search
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5C7BA8]"
@@ -593,6 +612,15 @@ export default function Dashboard({
                         >
                           Download
                         </button>
+                        {canEdit && (
+                          <button
+                            onClick={() => handleDeleteDoc(doc)}
+                            title="Delete document"
+                            className="text-slate-400 hover:text-red-500 transition"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
                       </div>
                     </div>
 

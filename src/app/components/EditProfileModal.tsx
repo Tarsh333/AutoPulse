@@ -14,6 +14,7 @@ export default function EditProfileModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const [name, setName] = useState(profile?.name ?? "");
   const [dateOfBirth, setDateOfBirth] = useState(
     profile?.date_of_birth ? profile.date_of_birth.slice(0, 10) : ""
   );
@@ -31,6 +32,7 @@ export default function EditProfileModal({
     try {
       await updateProfile(
         {
+          name: name || null,
           dateOfBirth: dateOfBirth || null,
           gender: gender || null,
           height: height || null,
@@ -60,6 +62,17 @@ export default function EditProfileModal({
         )}
 
         <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label className="block text-[#1F3E72] mb-2">Name</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              className={inputClass}
+              placeholder="Full name"
+            />
+          </div>
+
           <div>
             <label className="block text-[#1F3E72] mb-2">Date of Birth</label>
             <input

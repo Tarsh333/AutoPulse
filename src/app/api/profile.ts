@@ -14,6 +14,7 @@ export interface Profile {
 }
 
 export interface ProfileUpdate {
+  name?: string | null;
   dateOfBirth?: string | null;
   gender?: string | null;
   height?: string | null;
