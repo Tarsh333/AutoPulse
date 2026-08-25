@@ -21,12 +21,16 @@ import {
   Minus,
   ChevronDown,
 } from "lucide-react";
+import { toast } from "sonner";
 import AddPrescriptionModal from "./AddPrescriptionModal";
 import AddReportModal from "./AddReportModal";
 import ShareQRModal from "./ShareQRModal";
 import ExtractedView from "./ExtractedView";
 import EditProfileModal from "./EditProfileModal";
 import AppointmentCard from "./AppointmentCard";
+import Reveal from "./Reveal";
+import EmptyState from "./EmptyState";
+import { FileText } from "lucide-react";
 import { ActiveMember } from "../App";
 import { interpretSeries } from "../lib/metrics";
 import { getUser } from "../api/client";
@@ -178,9 +182,10 @@ export default function Dashboard({
   const handleReExtract = async (id: number) => {
     try {
       await reExtractDocument(id);
+      toast.success("Queued for re-extraction");
       await loadDocuments();
     } catch (err) {
-      setError((err as Error).message);
+      toast.error((err as Error).message);
     }
   };
 
@@ -195,9 +200,10 @@ export default function Dashboard({
     try {
       await renameDocument(id, name);
       setRenamingId(null);
+      toast.success("Renamed");
       await loadDocuments();
     } catch (err) {
-      setError((err as Error).message);
+      toast.error((err as Error).message);
     }
   };
 
@@ -333,7 +339,7 @@ export default function Dashboard({
 
       {/* Main Content */}
       <div className="flex-1 p-4 lg:p-8">
-        <div className="max-w-6xl mx-auto space-y-6">
+        <Reveal className="max-w-6xl mx-auto space-y-6">
           {error && (
             <div className="p-4 rounded-xl bg-red-50 text-red-600 text-sm">
               {error}
@@ -482,7 +488,15 @@ export default function Dashboard({
             </div>
 
             {filtered.length === 0 ? (
-              <p className="text-[#5C7BA8]">No documents yet.</p>
+              <EmptyState
+                icon={<FileText size={26} />}
+                title={searchQuery ? "No matches" : "No documents yet"}
+                subtitle={
+                  searchQuery
+                    ? "Try a different search."
+                    : "Upload a prescription or report to get started."
+                }
+              />
             ) : (
               <div className="space-y-3">
                 {filtered.map((doc) => (
@@ -592,7 +606,7 @@ export default function Dashboard({
             )}
             </div>
           </div>
-        </div>
+        </Reveal>
       </div>
 
       {/* Right Panel - Appointment */}

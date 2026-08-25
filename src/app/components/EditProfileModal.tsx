@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { X } from "lucide-react";
+import { toast } from "sonner";
+import ModalShell from "./ModalShell";
 import { updateProfile, Profile } from "../api/profile";
 
 export default function EditProfileModal({
@@ -38,6 +39,7 @@ export default function EditProfileModal({
         },
         memberId
       );
+      toast.success("Details updated");
       onSaved();
     } catch (err) {
       setError((err as Error).message);
@@ -47,21 +49,10 @@ export default function EditProfileModal({
   };
 
   const inputClass =
-    "w-full px-4 py-3 border-2 border-[#D6E4F5] rounded-xl focus:outline-none focus:border-[#2F5D9F] bg-white";
+    "w-full px-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#2F5D9F]/30 focus:border-[#2F5D9F] bg-white transition";
 
   return (
-    <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl p-8 w-full max-w-lg shadow-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-[#1F3E72]">Edit Details</h3>
-          <button
-            onClick={onClose}
-            className="text-[#5C7BA8] hover:text-[#1F3E72]"
-          >
-            <X size={24} />
-          </button>
-        </div>
-
+    <ModalShell title="Edit Details" onClose={onClose} maxWidth="max-w-lg">
         {error && (
           <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">
             {error}
@@ -152,7 +143,6 @@ export default function EditProfileModal({
             </button>
           </div>
         </form>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

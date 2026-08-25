@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { CalendarPlus, Pencil, Trash2, Plus } from "lucide-react";
+import { toast } from "sonner";
 import { Appointment, googleCalendarUrl } from "../lib/calendar";
 import {
   getAppointments,
@@ -86,9 +87,10 @@ export default function AppointmentCard({
         await updateAppointment(formFor, payload);
       }
       setFormFor(null);
+      toast.success("Appointment saved");
       await load();
     } catch (err) {
-      setError((err as Error).message);
+      toast.error((err as Error).message);
     } finally {
       setSaving(false);
     }
@@ -97,9 +99,10 @@ export default function AppointmentCard({
   const handleDelete = async (id: number) => {
     try {
       await deleteAppointment(id);
+      toast.success("Appointment removed");
       await load();
     } catch (err) {
-      setError((err as Error).message);
+      toast.error((err as Error).message);
     }
   };
 

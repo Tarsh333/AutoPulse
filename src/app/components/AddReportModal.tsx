@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
-import { X } from "lucide-react";
+import { toast } from "sonner";
+import ModalShell from "./ModalShell";
 import { uploadDocument } from "../api/documents";
 
 export default function AddReportModal({
@@ -28,6 +29,7 @@ export default function AddReportModal({
     setUploading(true);
     try {
       await uploadDocument(file, category || "lab_report", memberId);
+      toast.success("Report uploaded — extracting…");
       onUploaded?.();
       onClose();
     } catch (err) {
@@ -38,18 +40,7 @@ export default function AddReportModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-8 w-full max-w-md shadow-lg">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-[#1F3E72]">Add Report</h3>
-          <button
-            onClick={onClose}
-            className="text-[#5C7BA8] hover:text-[#1F3E72]"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
+    <ModalShell title="Add Report" onClose={onClose}>
         {error && (
           <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">
             {error}
@@ -120,7 +111,6 @@ export default function AddReportModal({
             {uploading ? "Uploading..." : "Save"}
           </button>
         </form>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
-import { X, Copy, Check } from "lucide-react";
+import { Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 import { QRCodeCanvas } from "qrcode.react";
+import ModalShell from "./ModalShell";
 import { createShare } from "../api/shares";
 import { DocumentItem } from "../api/documents";
 
@@ -63,24 +65,14 @@ export default function ShareQRModal({
   const handleCopy = async () => {
     await navigator.clipboard.writeText(shareUrl);
     setCopied(true);
+    toast.success("Link copied");
     setTimeout(() => setCopied(false), 1500);
   };
 
   const showQr = shareUrl && !expired;
 
   return (
-    <div className="fixed inset-0 bg-black/20 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl p-8 w-full max-w-md shadow-lg max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-[#1F3E72]">Share Documents</h3>
-          <button
-            onClick={onClose}
-            className="text-[#5C7BA8] hover:text-[#1F3E72]"
-          >
-            <X size={20} />
-          </button>
-        </div>
-
+    <ModalShell title="Share Documents" onClose={onClose}>
         {error && (
           <div className="mb-4 p-3 rounded-xl bg-red-50 text-red-600 text-sm">
             {error}
@@ -176,7 +168,6 @@ export default function ShareQRModal({
             </button>
           </div>
         )}
-      </div>
-    </div>
+    </ModalShell>
   );
 }

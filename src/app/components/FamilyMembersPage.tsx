@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Trash2, ChevronRight } from "lucide-react";
+import { ArrowLeft, Trash2, ChevronRight, Users } from "lucide-react";
+import { toast } from "sonner";
 import AddMemberModal from "./AddMemberModal";
+import Reveal from "./Reveal";
+import EmptyState from "./EmptyState";
 import { getMembers, addMember, deleteMember, FamilyMember } from "../api/members";
 import { getUser } from "../api/client";
 
@@ -53,6 +56,7 @@ export default function FamilyMembersPage({
   }) => {
     await addMember(data.name, data.email, data.relationship);
     setShowAddModal(false);
+    toast.success(`${data.name} added`);
     await load();
   };
 
@@ -60,9 +64,10 @@ export default function FamilyMembersPage({
     if (!confirm(`Remove ${m.name}? This deletes their documents too.`)) return;
     try {
       await deleteMember(m.id);
+      toast.success(`${m.name} removed`);
       await load();
     } catch (err) {
-      setError((err as Error).message);
+      toast.error((err as Error).message);
     }
   };
 
@@ -99,16 +104,32 @@ export default function FamilyMembersPage({
         )}
 
         {loading ? (
-          <p className="text-[#5C7BA8]">Loading members...</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="bg-white p-6 rounded-2xl border border-slate-100 h-56 animate-pulse"
+              >
+                <div className="w-20 h-20 rounded-full bg-slate-100 mx-auto" />
+                <div className="h-4 bg-slate-100 rounded mt-4 w-2/3 mx-auto" />
+                <div className="h-3 bg-slate-100 rounded mt-2 w-1/2 mx-auto" />
+              </div>
+            ))}
+          </div>
         ) : members.length === 0 ? (
-          <p className="text-[#5C7BA8]">No family members yet.</p>
+          <EmptyState
+            icon={<Users size={26} />}
+            title="No family members yet"
+            subtitle="Add a family member to manage their records too."
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {members.map((member) => {
+            {members.map((member, i) => {
               const isSelf = me?.id === member.id;
               return (
-                <div
+                <Reveal
                   key={member.id}
+                  delay={i * 0.05}
                   className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
                 >
                   <div className="flex flex-col items-center text-center space-y-4">
@@ -155,7 +176,7 @@ export default function FamilyMembersPage({
                       )}
                     </div>
                   </div>
-                </div>
+                </Reveal>
               );
             })}
           </div>
