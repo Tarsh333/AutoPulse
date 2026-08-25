@@ -30,6 +30,7 @@ import EditProfileModal from "./EditProfileModal";
 import AppointmentCard from "./AppointmentCard";
 import Reveal from "./Reveal";
 import EmptyState from "./EmptyState";
+import ChatWidget from "./ChatWidget";
 import { FileText } from "lucide-react";
 import { ActiveMember } from "../App";
 import { interpretSeries } from "../lib/metrics";
@@ -652,6 +653,8 @@ export default function Dashboard({
           }}
         />
       )}
+
+      <ChatWidget memberId={memberId} subjectName={activeMember?.name} />
     </div>
   );
 }
