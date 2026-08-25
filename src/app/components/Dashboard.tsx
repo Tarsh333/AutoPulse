@@ -19,6 +19,7 @@ import {
   TrendingUp,
   TrendingDown,
   Minus,
+  ChevronDown,
 } from "lucide-react";
 import AddPrescriptionModal from "./AddPrescriptionModal";
 import AddReportModal from "./AddReportModal";
@@ -100,6 +101,18 @@ export default function Dashboard({
   const [renamingId, setRenamingId] = useState<number | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [error, setError] = useState("");
+
+  // Collapsible sections (phone only; always expanded on lg+ via lg:block).
+  // On phone, start with most sections collapsed to reduce scrolling.
+  const [open, setOpen] = useState(() => {
+    const mobile =
+      typeof window !== "undefined" && window.innerWidth < 1024;
+    return mobile
+      ? { details: false, graph: false, docs: true, appt: false }
+      : { details: true, graph: true, docs: true, appt: true };
+  });
+  const toggle = (k: keyof typeof open) =>
+    setOpen((o) => ({ ...o, [k]: !o[k] }));
 
   const loadMetrics = async () => {
     try {
@@ -208,6 +221,21 @@ export default function Dashboard({
     none: "bg-gray-100 text-gray-500",
   };
 
+  // Mobile-only collapse toggle for a section.
+  const Chevron = ({ k }: { k: keyof typeof open }) => (
+    <button
+      type="button"
+      onClick={() => toggle(k)}
+      className="lg:hidden text-[#5C7BA8]"
+      aria-label="Toggle section"
+    >
+      <ChevronDown
+        size={20}
+        className={`transition-transform ${open[k] ? "rotate-180" : ""}`}
+      />
+    </button>
+  );
+
   return (
     <div className="min-h-screen bg-[#EAF2FB] flex flex-col lg:flex-row">
       {/* Left Panel - Basic Details */}
@@ -244,7 +272,10 @@ export default function Dashboard({
         )}
 
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-[#1F3E72]">Basic Details</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-[#1F3E72]">Basic Details</h3>
+            <Chevron k="details" />
+          </div>
           <button
             onClick={() => setShowProfileModal(true)}
             title="Edit details"
@@ -254,7 +285,7 @@ export default function Dashboard({
           </button>
         </div>
 
-        <div className="space-y-6">
+        <div className={`${open.details ? "" : "hidden "}lg:block space-y-6`}>
           <div className="flex flex-col items-center pb-6 border-b border-[#D6E4F5]">
             <div className="w-24 h-24 rounded-full bg-[#2F5D9F] text-white flex items-center justify-center text-2xl mb-4">
               {initials(profile?.name)}
@@ -332,15 +363,18 @@ export default function Dashboard({
           {/* Health Data Graph — from extracted lab-report metrics */}
           <div className="bg-white rounded-xl p-6 border border-[#D6E4F5]">
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-[#1F3E72]">
-                Health Data
-                {activeSeries?.unit ? ` (${activeSeries.unit})` : ""}
-              </h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-[#1F3E72]">
+                  Health Data
+                  {activeSeries?.unit ? ` (${activeSeries.unit})` : ""}
+                </h3>
+                <Chevron k="graph" />
+              </div>
               {metrics.length > 0 && (
                 <select
                   value={selectedMetric}
                   onChange={(e) => setSelectedMetric(e.target.value)}
-                  className="px-4 py-2 border border-[#D6E4F5] rounded-lg focus:outline-none focus:border-[#2F5D9F] bg-white text-[#1F3E72]"
+                  className="px-3 py-2 border border-[#D6E4F5] rounded-lg focus:outline-none focus:border-[#2F5D9F] bg-white text-[#1F3E72] text-sm"
                 >
                   {metrics.map((m) => (
                     <option key={m.name} value={m.name}>
@@ -351,6 +385,7 @@ export default function Dashboard({
               )}
             </div>
 
+            <div className={`${open.graph ? "" : "hidden "}lg:block`}>
             {metrics.length === 0 ? (
               <p className="text-[#5C7BA8] py-12 text-center">
                 No lab-report data yet. Upload a lab report and the extracted
@@ -409,14 +444,19 @@ export default function Dashboard({
                 )}
               </div>
             )}
+            </div>
           </div>
 
           {/* Documents */}
           <div className="bg-white rounded-xl p-6 border border-[#D6E4F5]">
-            <h3 className="text-[#1F3E72] mb-4">
-              {activeMember ? `${activeMember.name}'s Documents` : "My Documents"}
-            </h3>
+            <div className="flex items-center gap-2 mb-4">
+              <h3 className="text-[#1F3E72]">
+                {activeMember ? `${activeMember.name}'s Documents` : "My Documents"}
+              </h3>
+              <Chevron k="docs" />
+            </div>
 
+            <div className={`${open.docs ? "" : "hidden "}lg:block`}>
             <div className="relative mb-4">
               <Search
                 className="absolute left-3 top-1/2 -translate-y-1/2 text-[#5C7BA8]"
@@ -537,14 +577,20 @@ export default function Dashboard({
                 ))}
               </div>
             )}
+            </div>
           </div>
         </div>
       </div>
 
       {/* Right Panel - Appointment */}
       <div className="w-full lg:w-80 bg-white border-t lg:border-t-0 lg:border-l border-[#D6E4F5] p-6">
-        <h3 className="text-[#1F3E72] mb-6">Next Appointment</h3>
-        <AppointmentCard memberId={memberId} />
+        <div className="flex items-center gap-2 mb-6">
+          <h3 className="text-[#1F3E72]">Next Appointment</h3>
+          <Chevron k="appt" />
+        </div>
+        <div className={`${open.appt ? "" : "hidden "}lg:block`}>
+          <AppointmentCard memberId={memberId} />
+        </div>
       </div>
 
       {/* Modals */}
