@@ -29,6 +29,7 @@ import EditProfileModal from "./EditProfileModal";
 import AppointmentCard from "./AppointmentCard";
 import { ActiveMember } from "../App";
 import { interpretSeries } from "../lib/metrics";
+import { getUser } from "../api/client";
 import { getProfile, Profile } from "../api/profile";
 import {
   getDocuments,
@@ -86,6 +87,11 @@ export default function Dashboard({
 }: DashboardProps) {
   // When managing a family member, scope all data to their id.
   const memberId = activeMember?.id;
+
+  // You can edit your own data, or (as main member) any family member's.
+  // A regular member viewing a relative is read-only.
+  const isMain = getUser()?.role === "MAIN_MEMBER";
+  const canEdit = !memberId || isMain;
 
   const [metrics, setMetrics] = useState<MetricSeries[]>([]);
   const [selectedMetric, setSelectedMetric] = useState<string>("");
@@ -237,9 +243,9 @@ export default function Dashboard({
   );
 
   return (
-    <div className="min-h-screen bg-[#EAF2FB] flex flex-col lg:flex-row">
+    <div className="min-h-screen bg-gradient-to-br from-[#EAF2FB] via-white to-[#EAF2FB] flex flex-col lg:flex-row">
       {/* Left Panel - Basic Details */}
-      <div className="w-full lg:w-80 bg-white border-b lg:border-b-0 lg:border-r border-[#D6E4F5] p-6">
+      <div className="w-full lg:w-80 bg-white/80 backdrop-blur border-b lg:border-b-0 lg:border-r border-slate-100 p-6">
         <div className="flex items-center justify-between mb-6">
           <button
             onClick={onNavigateToMembers}
@@ -276,18 +282,20 @@ export default function Dashboard({
             <h3 className="text-[#1F3E72]">Basic Details</h3>
             <Chevron k="details" />
           </div>
-          <button
-            onClick={() => setShowProfileModal(true)}
-            title="Edit details"
-            className="flex items-center gap-1 text-[#2F5D9F] hover:text-[#1F3E72] text-sm"
-          >
-            <Pencil size={15} /> Edit
-          </button>
+          {canEdit && (
+            <button
+              onClick={() => setShowProfileModal(true)}
+              title="Edit details"
+              className="flex items-center gap-1 text-[#2F5D9F] hover:text-[#1F3E72] text-sm"
+            >
+              <Pencil size={15} /> Edit
+            </button>
+          )}
         </div>
 
         <div className={`${open.details ? "" : "hidden "}lg:block space-y-6`}>
           <div className="flex flex-col items-center pb-6 border-b border-[#D6E4F5]">
-            <div className="w-24 h-24 rounded-full bg-[#2F5D9F] text-white flex items-center justify-center text-2xl mb-4">
+            <div className="w-24 h-24 rounded-full bg-gradient-to-br from-[#2F5D9F] to-[#1F3E72] text-white flex items-center justify-center text-2xl mb-4 shadow-lg shadow-[#2F5D9F]/30">
               {initials(profile?.name)}
             </div>
             <h4 className="text-[#1F3E72]">{profile?.name ?? "..."}</h4>
@@ -333,35 +341,37 @@ export default function Dashboard({
           )}
 
           {/* Top Actions */}
-          <div
-            className={`grid gap-4 grid-cols-1 ${
-              memberId ? "sm:grid-cols-2" : "sm:grid-cols-3"
-            }`}
-          >
-            <button
-              onClick={() => setShowPrescriptionModal(true)}
-              className="p-6 bg-white border border-[#D6E4F5] rounded-xl hover:border-[#2F5D9F] transition-colors text-[#1F3E72]"
+          {canEdit && (
+            <div
+              className={`grid gap-4 grid-cols-1 ${
+                memberId ? "sm:grid-cols-2" : "sm:grid-cols-3"
+              }`}
             >
-              Add Prescription
-            </button>
-            <button
-              onClick={() => setShowReportModal(true)}
-              className="p-6 bg-white border border-[#D6E4F5] rounded-xl hover:border-[#2F5D9F] transition-colors text-[#1F3E72]"
-            >
-              Add Report
-            </button>
-            {!memberId && (
               <button
-                onClick={() => setShowQRModal(true)}
-                className="p-6 bg-white border border-[#D6E4F5] rounded-xl hover:border-[#2F5D9F] transition-colors text-[#1F3E72]"
+                onClick={() => setShowPrescriptionModal(true)}
+                className="group p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#2F5D9F] transition-all text-[#1F3E72] font-medium"
               >
-                Share QR
+                + Add Prescription
               </button>
-            )}
-          </div>
+              <button
+                onClick={() => setShowReportModal(true)}
+                className="group p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#2F5D9F] transition-all text-[#1F3E72] font-medium"
+              >
+                + Add Report
+              </button>
+              {!memberId && (
+                <button
+                  onClick={() => setShowQRModal(true)}
+                  className="group p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#2F5D9F] transition-all text-[#1F3E72] font-medium"
+                >
+                  Share QR
+                </button>
+              )}
+            </div>
+          )}
 
           {/* Health Data Graph — from extracted lab-report metrics */}
-          <div className="bg-white rounded-xl p-6 border border-[#D6E4F5]">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <h3 className="text-[#1F3E72]">
@@ -448,7 +458,7 @@ export default function Dashboard({
           </div>
 
           {/* Documents */}
-          <div className="bg-white rounded-xl p-6 border border-[#D6E4F5]">
+          <div className="bg-white rounded-2xl p-6 border border-slate-100 shadow-sm">
             <div className="flex items-center gap-2 mb-4">
               <h3 className="text-[#1F3E72]">
                 {activeMember ? `${activeMember.name}'s Documents` : "My Documents"}
@@ -478,7 +488,7 @@ export default function Dashboard({
                 {filtered.map((doc) => (
                   <div
                     key={doc.id}
-                    className="border border-[#D6E4F5] rounded-lg hover:bg-[#EAF2FB] transition-colors"
+                    className="border border-slate-100 rounded-xl hover:bg-[#EAF2FB]/60 hover:shadow-sm transition-all"
                   >
                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4">
                       <div className="min-w-0">
@@ -514,13 +524,15 @@ export default function Dashboard({
                             <p className="text-[#1F3E72] truncate">
                               {doc.file_name}
                             </p>
-                            <button
-                              onClick={() => startRename(doc)}
-                              title="Rename"
-                              className="text-[#5C7BA8] hover:text-[#2F5D9F] shrink-0"
-                            >
-                              <Pencil size={14} />
-                            </button>
+                            {canEdit && (
+                              <button
+                                onClick={() => startRename(doc)}
+                                title="Rename"
+                                className="text-[#5C7BA8] hover:text-[#2F5D9F] shrink-0"
+                              >
+                                <Pencil size={14} />
+                              </button>
+                            )}
                           </div>
                         )}
                         <p className="text-sm text-[#5C7BA8]">
@@ -537,16 +549,17 @@ export default function Dashboard({
                         >
                           {doc.extraction_status}
                         </span>
-                        {(doc.extraction_status === "failed" ||
-                          doc.extraction_status === "skipped") && (
-                          <button
-                            onClick={() => handleReExtract(doc.id)}
-                            title="Re-run extraction"
-                            className="text-[#2F5D9F] hover:text-[#1F3E72]"
-                          >
-                            <RefreshCw size={16} />
-                          </button>
-                        )}
+                        {canEdit &&
+                          (doc.extraction_status === "failed" ||
+                            doc.extraction_status === "skipped") && (
+                            <button
+                              onClick={() => handleReExtract(doc.id)}
+                              title="Re-run extraction"
+                              className="text-[#2F5D9F] hover:text-[#1F3E72]"
+                            >
+                              <RefreshCw size={16} />
+                            </button>
+                          )}
                         {doc.extracted_data && (
                           <button
                             onClick={() =>
@@ -583,13 +596,13 @@ export default function Dashboard({
       </div>
 
       {/* Right Panel - Appointment */}
-      <div className="w-full lg:w-80 bg-white border-t lg:border-t-0 lg:border-l border-[#D6E4F5] p-6">
+      <div className="w-full lg:w-80 bg-white/80 backdrop-blur border-t lg:border-t-0 lg:border-l border-slate-100 p-6">
         <div className="flex items-center gap-2 mb-6">
           <h3 className="text-[#1F3E72]">Next Appointment</h3>
           <Chevron k="appt" />
         </div>
         <div className={`${open.appt ? "" : "hidden "}lg:block`}>
-          <AppointmentCard memberId={memberId} />
+          <AppointmentCard memberId={memberId} canEdit={canEdit} />
         </div>
       </div>
 

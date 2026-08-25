@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
-import { ArrowLeft, Trash2, Eye } from "lucide-react";
+import { ArrowLeft, Trash2, ChevronRight } from "lucide-react";
 import AddMemberModal from "./AddMemberModal";
-import ViewProfileModal from "./ViewProfileModal";
 import { getMembers, addMember, deleteMember, FamilyMember } from "../api/members";
 import { getUser } from "../api/client";
 
@@ -28,7 +27,6 @@ export default function FamilyMembersPage({
 
   const [members, setMembers] = useState<FamilyMember[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [viewMember, setViewMember] = useState<FamilyMember | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -69,7 +67,7 @@ export default function FamilyMembersPage({
   };
 
   return (
-    <div className="min-h-screen bg-[#EAF2FB]">
+    <div className="min-h-screen bg-gradient-to-br from-[#EAF2FB] via-white to-[#EAF2FB]">
       <div className="max-w-6xl mx-auto p-4 md:p-8">
         <div className="flex items-center justify-between mb-8 gap-3">
           <button
@@ -111,10 +109,10 @@ export default function FamilyMembersPage({
               return (
                 <div
                   key={member.id}
-                  className="bg-white p-6 rounded-xl border-2 border-[#D6E4F5] shadow-sm"
+                  className="bg-white p-6 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all"
                 >
                   <div className="flex flex-col items-center text-center space-y-4">
-                    <div className="w-20 h-20 rounded-full bg-[#2F5D9F] text-white flex items-center justify-center text-xl">
+                    <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[#2F5D9F] to-[#1F3E72] text-white flex items-center justify-center text-xl shadow-lg shadow-[#2F5D9F]/30">
                       {initials(member.name)}
                     </div>
 
@@ -133,32 +131,24 @@ export default function FamilyMembersPage({
                       </p>
                     </div>
 
-                    <div className="w-full pt-4 border-t border-[#D6E4F5] flex flex-wrap gap-2 justify-center">
+                    <div className="w-full pt-4 border-t border-slate-100 flex flex-wrap gap-2 justify-center">
+                      {/* Everyone can open a family member to view their docs. */}
                       <button
-                        onClick={() => setViewMember(member)}
-                        className="flex items-center gap-1 px-3 py-2 text-[#2F5D9F] border border-[#2F5D9F] rounded-lg hover:bg-[#EAF2FB] text-sm"
+                        onClick={() =>
+                          onSelectMember({ id: member.id, name: member.name })
+                        }
+                        className="flex items-center gap-1 px-4 py-2 bg-[#2F5D9F] text-white rounded-lg hover:bg-[#1F3E72] text-sm transition"
                       >
-                        <Eye size={15} /> View
+                        {isMain && !isSelf ? "Manage" : "Open"}
+                        <ChevronRight size={15} />
                       </button>
-
-                      {/* Main member can manage (upload/edit) any member. */}
-                      {isMain && (
-                        <button
-                          onClick={() =>
-                            onSelectMember({ id: member.id, name: member.name })
-                          }
-                          className="px-3 py-2 bg-[#2F5D9F] text-white rounded-lg hover:bg-[#1F3E72] text-sm"
-                        >
-                          Manage
-                        </button>
-                      )}
 
                       {/* Main member can delete other members (not self). */}
                       {isMain && !isSelf && member.role === "MEMBER" && (
                         <button
                           onClick={() => handleDelete(member)}
                           title="Remove member"
-                          className="flex items-center px-3 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 text-sm"
+                          className="flex items-center px-3 py-2 text-red-600 border border-red-200 rounded-lg hover:bg-red-50 text-sm transition"
                         >
                           <Trash2 size={15} />
                         </button>
@@ -176,14 +166,6 @@ export default function FamilyMembersPage({
         <AddMemberModal
           onClose={() => setShowAddModal(false)}
           onSave={handleAddMember}
-        />
-      )}
-
-      {viewMember && (
-        <ViewProfileModal
-          memberId={viewMember.id}
-          memberName={viewMember.name}
-          onClose={() => setViewMember(null)}
         />
       )}
     </div>

@@ -1,8 +1,12 @@
 import { apiRequest } from "./client";
 import { Appointment } from "../lib/calendar";
 
-// Backend row shape (snake_case, one per user).
+export interface AppointmentRecord extends Appointment {
+  id: number;
+}
+
 interface AppointmentRow {
+  id: number;
   title: string;
   appt_date: string;
   appt_time: string;
@@ -14,35 +18,42 @@ interface AppointmentRow {
 const memberQuery = (memberId?: number) =>
   memberId ? `?memberId=${memberId}` : "";
 
-export async function getAppointment(
+const toRecord = (r: AppointmentRow): AppointmentRecord => ({
+  id: r.id,
+  title: r.title,
+  date: r.appt_date,
+  time: r.appt_time,
+  durationMins: r.duration_mins,
+  location: r.location ?? undefined,
+  notes: r.notes ?? undefined,
+});
+
+export async function getAppointments(
   memberId?: number
-): Promise<Appointment | null> {
-  const row = await apiRequest<AppointmentRow | null>(
+): Promise<AppointmentRecord[]> {
+  const rows = await apiRequest<AppointmentRow[]>(
     `/appointments${memberQuery(memberId)}`
   );
-  if (!row) return null;
-  return {
-    title: row.title,
-    date: row.appt_date,
-    time: row.appt_time,
-    durationMins: row.duration_mins,
-    location: row.location ?? undefined,
-    notes: row.notes ?? undefined,
-  };
+  return rows.map(toRecord);
 }
 
-export async function saveAppointment(
+export async function createAppointment(
   appt: Appointment,
   memberId?: number
 ): Promise<void> {
   await apiRequest("/appointments", {
-    method: "PUT",
+    method: "POST",
     body: memberId ? { ...appt, memberId } : appt,
   });
 }
 
-export async function clearAppointment(memberId?: number): Promise<void> {
-  await apiRequest(`/appointments${memberQuery(memberId)}`, {
-    method: "DELETE",
-  });
+export async function updateAppointment(
+  id: number,
+  appt: Appointment
+): Promise<void> {
+  await apiRequest(`/appointments/${id}`, { method: "PUT", body: appt });
+}
+
+export async function deleteAppointment(id: number): Promise<void> {
+  await apiRequest(`/appointments/${id}`, { method: "DELETE" });
 }
