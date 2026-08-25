@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import { MessageCircle, X, Send, Sparkles } from "lucide-react";
-import { sendChat, ChatMessage } from "../api/chat";
+import { sendChatStream, ChatMessage } from "../api/chat";
 
 export default function ChatWidget({
   memberId,
@@ -24,18 +24,27 @@ export default function ChatWidget({
     e.preventDefault();
     const text = input.trim();
     if (!text || loading) return;
+    const history = messages;
     const next = [...messages, { role: "user" as const, text }];
-    setMessages(next);
+    // Add an empty assistant bubble that we'll fill as tokens stream in.
+    setMessages([...next, { role: "assistant", text: "" }]);
     setInput("");
     setLoading(true);
+
+    const setAssistant = (updater: (prev: string) => string) =>
+      setMessages((cur) => {
+        const copy = [...cur];
+        const last = copy[copy.length - 1];
+        copy[copy.length - 1] = { role: "assistant", text: updater(last.text) };
+        return copy;
+      });
+
     try {
-      const answer = await sendChat(text, messages, memberId);
-      setMessages([...next, { role: "assistant", text: answer }]);
+      await sendChatStream(text, history, memberId, (delta) =>
+        setAssistant((prev) => prev + delta)
+      );
     } catch (err) {
-      setMessages([
-        ...next,
-        { role: "assistant", text: `⚠️ ${(err as Error).message}` },
-      ]);
+      setAssistant(() => `⚠️ ${(err as Error).message}`);
     } finally {
       setLoading(false);
     }
@@ -99,7 +108,9 @@ export default function ChatWidget({
                 </div>
               )}
 
-              {messages.map((m, i) => (
+              {messages
+                .filter((m) => !(m.role === "assistant" && m.text === ""))
+                .map((m, i) => (
                 <div
                   key={i}
                   className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
@@ -116,7 +127,8 @@ export default function ChatWidget({
                 </div>
               ))}
 
-              {loading && (
+              {loading &&
+                (messages[messages.length - 1]?.text ?? "") === "" && (
                 <div className="flex justify-start">
                   <div className="bg-white border border-slate-100 rounded-2xl rounded-bl-sm px-3 py-2 flex gap-1">
                     {[0, 150, 300].map((d) => (

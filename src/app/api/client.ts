@@ -98,3 +98,40 @@ export async function apiRequest<T = unknown>(
 
   return json.data as T;
 }
+
+// Streams a POST response body as text chunks; calls onChunk with each delta.
+export async function apiStream(
+  path: string,
+  body: unknown,
+  onChunk: (delta: string) => void
+): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
+  const token = getToken();
+  if (token) headers.Authorization = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE_URL}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok || !res.body) {
+    if (res.status === 401) clearSession();
+    let message = `Request failed (${res.status})`;
+    try {
+      const j = await res.json();
+      message = j.message || message;
+    } catch {
+      /* non-JSON */
+    }
+    throw new Error(message);
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    onChunk(decoder.decode(value, { stream: true }));
+  }
+}
