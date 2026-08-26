@@ -368,11 +368,7 @@ export default function Dashboard({
 
           {/* Top Actions */}
           {canEdit && (
-            <div
-              className={`grid gap-4 grid-cols-1 ${
-                memberId ? "sm:grid-cols-2" : "sm:grid-cols-3"
-              }`}
-            >
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-3">
               <button
                 onClick={() => setShowPrescriptionModal(true)}
                 className="group p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#2F5D9F] transition-all text-[#1F3E72] font-medium"
@@ -385,14 +381,12 @@ export default function Dashboard({
               >
                 + Add Report
               </button>
-              {!memberId && (
-                <button
-                  onClick={() => setShowQRModal(true)}
-                  className="group p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#2F5D9F] transition-all text-[#1F3E72] font-medium"
-                >
-                  Share QR
-                </button>
-              )}
+              <button
+                onClick={() => setShowQRModal(true)}
+                className="group p-6 bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md hover:-translate-y-0.5 hover:border-[#2F5D9F] transition-all text-[#1F3E72] font-medium"
+              >
+                Share QR
+              </button>
             </div>
           )}
 
