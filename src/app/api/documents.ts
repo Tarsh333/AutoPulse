@@ -109,10 +109,20 @@ export function reExtractDocument(id: number): Promise<unknown> {
 export function renameDocument(
   id: number,
   fileName: string
-): Promise<{ id: number; file_name: string }> {
+): Promise<unknown> {
   return apiRequest(`/documents/${id}`, {
     method: "PATCH",
     body: { file_name: fileName },
+  });
+}
+
+export function updateDocumentCategory(
+  id: number,
+  category: string
+): Promise<unknown> {
+  return apiRequest(`/documents/${id}`, {
+    method: "PATCH",
+    body: { category },
   });
 }
 

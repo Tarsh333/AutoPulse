@@ -41,6 +41,7 @@ import {
   getDownloadUrl,
   reExtractDocument,
   renameDocument,
+  updateDocumentCategory,
   deleteDocument,
   getMetrics,
   MetricSeries,
@@ -185,6 +186,16 @@ export default function Dashboard({
     try {
       await reExtractDocument(id);
       toast.success("Queued for re-extraction");
+      await loadDocuments();
+    } catch (err) {
+      toast.error((err as Error).message);
+    }
+  };
+
+  const handleCategoryChange = async (id: number, category: string) => {
+    try {
+      await updateDocumentCategory(id, category);
+      toast.success("Category updated");
       await loadDocuments();
     } catch (err) {
       toast.error((err as Error).message);
@@ -563,10 +574,34 @@ export default function Dashboard({
                             )}
                           </div>
                         )}
-                        <p className="text-sm text-[#5C7BA8]">
-                          {new Date(doc.created_at).toLocaleDateString()}
-                          {doc.category ? ` · ${doc.category}` : ""}
-                        </p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <p className="text-sm text-[#5C7BA8]">
+                            {new Date(doc.created_at).toLocaleDateString()}
+                          </p>
+                          {canEdit ? (
+                            <select
+                              value={doc.category ?? ""}
+                              onChange={(e) =>
+                                handleCategoryChange(doc.id, e.target.value)
+                              }
+                              className="text-xs border border-slate-200 rounded-md px-1.5 py-0.5 text-[#5C7BA8] bg-white focus:outline-none focus:border-[#2F5D9F]"
+                            >
+                              <option value="">uncategorized</option>
+                              <option value="prescription">prescription</option>
+                              <option value="lab_report">lab report</option>
+                              <option value="xray">x-ray</option>
+                              <option value="mri">mri</option>
+                              <option value="ct_scan">ct scan</option>
+                              <option value="other">other</option>
+                            </select>
+                          ) : (
+                            doc.category && (
+                              <span className="text-sm text-[#5C7BA8]">
+                                · {doc.category}
+                              </span>
+                            )
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center flex-wrap gap-3 sm:shrink-0">
                         <span
