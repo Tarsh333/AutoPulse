@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { register } from "../api/auth";
 import { updateProfile } from "../api/profile";
+import PasswordInput from "./PasswordInput";
 
 export default function SignupPage({
   onSignup,
@@ -85,13 +86,11 @@ export default function SignupPage({
 
           <div>
             <label className="block text-[#1F3E72] mb-2">Password</label>
-            <input
-              type="password"
+            <PasswordInput
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full px-4 py-3.5 border-2 border-[#D6E4F5] rounded-xl focus:outline-none focus:border-[#2F5D9F] bg-white transition-colors"
               placeholder="Enter your password"
-              required
             />
           </div>
 

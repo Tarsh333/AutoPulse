@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { login, sendOtp, verifyOtp } from "../api/auth";
+import PasswordInput from "./PasswordInput";
 
 type Mode = "password" | "otp";
 
@@ -136,13 +137,11 @@ export default function LoginPage({
 
             <div>
               <label className="block text-[#1F3E72] mb-2">Password</label>
-              <input
-                type="password"
+              <PasswordInput
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className={inputClass}
                 placeholder="Enter your password"
-                required
               />
             </div>
 
