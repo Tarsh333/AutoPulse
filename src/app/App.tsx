@@ -5,7 +5,7 @@ import SignupPage from "./components/SignupPage";
 import Dashboard from "./components/Dashboard";
 import FamilyMembersPage from "./components/FamilyMembersPage";
 import SharedDocumentsPage from "./components/SharedDocumentsPage";
-import { clearSession, isLoggedIn } from "./api/client";
+import { clearSession, enterDemo, isLoggedIn } from "./api/client";
 
 type Page = "entry" | "login" | "signup" | "dashboard" | "family-members";
 
@@ -29,6 +29,13 @@ export default function App() {
     setCurrentPage("login");
   };
 
+  // Explore the app without an account, backed by local demo data.
+  const handleEnterDemo = () => {
+    enterDemo();
+    setActiveMember(null);
+    setCurrentPage("dashboard");
+  };
+
   // Public share links (/share/:token) bypass auth entirely.
   const shareMatch = window.location.pathname.match(/^\/share\/([^/]+)$/);
   if (shareMatch) {
@@ -38,13 +45,17 @@ export default function App() {
   return (
     <div className="size-full">
       {currentPage === "entry" && (
-        <EntryPage onGetStarted={() => setCurrentPage("login")} />
+        <EntryPage
+          onGetStarted={() => setCurrentPage("login")}
+          onExploreDemo={handleEnterDemo}
+        />
       )}
 
       {currentPage === "login" && (
         <LoginPage
           onLogin={() => setCurrentPage("dashboard")}
           onSwitchToSignup={() => setCurrentPage("signup")}
+          onExploreDemo={handleEnterDemo}
         />
       )}
 

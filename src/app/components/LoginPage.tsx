@@ -7,9 +7,11 @@ type Mode = "password" | "otp";
 export default function LoginPage({
   onLogin,
   onSwitchToSignup,
+  onExploreDemo,
 }: {
   onLogin: () => void;
   onSwitchToSignup: () => void;
+  onExploreDemo: () => void;
 }) {
   const [mode, setMode] = useState<Mode>("password");
 
@@ -221,6 +223,20 @@ export default function LoginPage({
             Sign Up
           </button>
         </p>
+
+        {/* Try the app without an account, backed by sample data. */}
+        <div className="mt-6 flex items-center gap-3 text-[#9DB4D4]">
+          <span className="h-px flex-1 bg-[#D6E4F5]" />
+          <span className="text-xs">or</span>
+          <span className="h-px flex-1 bg-[#D6E4F5]" />
+        </div>
+        <button
+          type="button"
+          onClick={onExploreDemo}
+          className="mt-4 w-full py-3 border-2 border-[#2F5D9F] text-[#2F5D9F] rounded-xl hover:bg-[#EAF2FB] transition-colors"
+        >
+          Continue without an account (Demo)
+        </button>
       </div>
     </div>
   );

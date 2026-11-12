@@ -5,7 +5,7 @@ export interface AppointmentRecord extends Appointment {
   id: number;
 }
 
-interface AppointmentRow {
+export interface AppointmentRow {
   id: number;
   title: string;
   appt_date: string;

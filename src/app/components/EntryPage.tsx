@@ -1,6 +1,12 @@
 import { Activity } from "lucide-react";
 
-export default function EntryPage({ onGetStarted }: { onGetStarted: () => void }) {
+export default function EntryPage({
+  onGetStarted,
+  onExploreDemo,
+}: {
+  onGetStarted: () => void;
+  onExploreDemo: () => void;
+}) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#EAF2FB] via-white to-[#D6E4F5] flex flex-col items-center justify-center p-6">
       <div className="text-center space-y-8">
@@ -20,12 +26,20 @@ export default function EntryPage({ onGetStarted }: { onGetStarted: () => void }
           </p>
         </div>
 
-        <button
-          onClick={onGetStarted}
-          className="px-12 py-3.5 bg-gradient-to-r from-[#2F5D9F] to-[#1F3E72] text-white rounded-xl shadow-lg shadow-[#2F5D9F]/30 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all"
-        >
-          Get Started
-        </button>
+        <div className="flex flex-col items-center gap-3">
+          <button
+            onClick={onGetStarted}
+            className="px-12 py-3.5 bg-gradient-to-r from-[#2F5D9F] to-[#1F3E72] text-white rounded-xl shadow-lg shadow-[#2F5D9F]/30 hover:shadow-xl hover:-translate-y-0.5 active:translate-y-0 transition-all"
+          >
+            Get Started
+          </button>
+          <button
+            onClick={onExploreDemo}
+            className="text-[#2F5D9F] hover:text-[#1F3E72] underline-offset-4 hover:underline transition-colors"
+          >
+            Explore the demo — no sign up
+          </button>
+        </div>
       </div>
     </div>
   );

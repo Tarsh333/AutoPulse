@@ -34,7 +34,7 @@ import ChatWidget from "./ChatWidget";
 import { FileText, Trash2 } from "lucide-react";
 import { ActiveMember } from "../App";
 import { interpretSeries } from "../lib/metrics";
-import { getUser } from "../api/client";
+import { getUser, isDemo } from "../api/client";
 import { getProfile, Profile } from "../api/profile";
 import {
   getDocuments,
@@ -99,6 +99,7 @@ export default function Dashboard({
   // A regular member viewing a relative is read-only.
   const isMain = getUser()?.role === "MAIN_MEMBER";
   const canEdit = !memberId || isMain;
+  const demo = isDemo();
 
   const [metrics, setMetrics] = useState<MetricSeries[]>([]);
   const [selectedMetric, setSelectedMetric] = useState<string>("");
@@ -371,6 +372,21 @@ export default function Dashboard({
       {/* Main Content */}
       <div className="flex-1 p-4 lg:p-8">
         <Reveal className="max-w-6xl mx-auto space-y-6">
+          {demo && (
+            <div className="flex flex-wrap items-center justify-between gap-2 p-4 rounded-xl bg-[#EAF2FB] border border-[#D6E4F5] text-[#1F3E72] text-sm">
+              <span>
+                👋 You're exploring <b>AutoPulse</b> with sample data. Changes
+                won't be saved.
+              </span>
+              <button
+                onClick={onLogout}
+                className="text-[#2F5D9F] hover:text-[#1F3E72] underline underline-offset-4"
+              >
+                Exit demo
+              </button>
+            </div>
+          )}
+
           {error && (
             <div className="p-4 rounded-xl bg-red-50 text-red-600 text-sm">
               {error}

@@ -1,11 +1,18 @@
 // Thin fetch wrapper around the AutoPulse backend.
 // Handles the base URL, JWT auth header, JSON parsing and error surfacing.
 
+import { DEMO_USER, getDemoResponse, streamDemoChat } from "./demo";
+
 const BASE_URL =
   (import.meta.env.VITE_API_URL as string) || "http://localhost:5000/api";
 
 const TOKEN_KEY = "autopulse_token";
 const USER_KEY = "autopulse_user";
+
+// Sentinel token used by "demo mode" (explore without signing in). When this is
+// the active token, requests are served from local canned data (see demo.ts)
+// instead of the backend.
+export const DEMO_TOKEN = "autopulse-demo";
 
 export interface AuthUser {
   id: number;
@@ -38,6 +45,15 @@ export function isLoggedIn(): boolean {
   return !!getToken();
 }
 
+export function isDemo(): boolean {
+  return getToken() === DEMO_TOKEN;
+}
+
+// Starts a demo session: a canned main-member user with the sentinel token.
+export function enterDemo() {
+  setSession(DEMO_TOKEN, DEMO_USER);
+}
+
 // The backend always responds with { success, message?, data? }.
 interface ApiEnvelope<T> {
   success: boolean;
@@ -56,6 +72,11 @@ export async function apiRequest<T = unknown>(
   path: string,
   { method = "GET", body, auth = true }: RequestOptions = {}
 ): Promise<T> {
+  // In demo mode, serve everything from local canned data.
+  if (isDemo()) {
+    return getDemoResponse<T>(path, method);
+  }
+
   const headers: Record<string, string> = {};
 
   if (auth) {
@@ -105,6 +126,12 @@ export async function apiStream(
   body: unknown,
   onChunk: (delta: string) => void
 ): Promise<void> {
+  // In demo mode, stream a canned chat answer instead of calling the backend.
+  if (isDemo()) {
+    streamDemoChat(onChunk);
+    return;
+  }
+
   const headers: Record<string, string> = { "Content-Type": "application/json" };
   const token = getToken();
   if (token) headers.Authorization = `Bearer ${token}`;
